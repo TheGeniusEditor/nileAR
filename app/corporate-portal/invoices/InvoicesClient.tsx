@@ -1,0 +1,338 @@
+"use client"
+
+import Link from 'next/link'
+import Header from '@/app/components/Header'
+import Sidebar from '@/app/components/Sidebar'
+import { useState } from 'react'
+
+interface Invoice {
+  id: string
+  invoiceNumber: string
+  guestName: string
+  guestInitials: string
+  guestInitialsBg: string
+  guestInitialsColor: string
+  issued: string
+  dueDate: string
+  amount: number
+  status: 'overdue' | 'unpaid' | 'paid'
+}
+
+const invoicesData: Invoice[] = [
+  {
+    id: '1',
+    invoiceNumber: '#INV-2023-089',
+    guestName: 'Sarah Jenkins',
+    guestInitials: 'SJ',
+    guestInitialsBg: 'bg-orange-100',
+    guestInitialsColor: 'text-orange-600',
+    issued: 'Oct 12, 2023',
+    dueDate: 'Oct 26, 2023',
+    amount: 1250.00,
+    status: 'overdue'
+  },
+  {
+    id: '2',
+    invoiceNumber: '#INV-2023-092',
+    guestName: 'Michael Klien',
+    guestInitials: 'MK',
+    guestInitialsBg: 'bg-blue-100',
+    guestInitialsColor: 'text-blue-600',
+    issued: 'Oct 28, 2023',
+    dueDate: 'Nov 11, 2023',
+    amount: 840.50,
+    status: 'unpaid'
+  },
+  {
+    id: '3',
+    invoiceNumber: '#INV-2023-075',
+    guestName: 'Elena Woods',
+    guestInitials: 'EW',
+    guestInitialsBg: 'bg-purple-100',
+    guestInitialsColor: 'text-purple-600',
+    issued: 'Oct 05, 2023',
+    dueDate: 'Oct 19, 2023',
+    amount: 2100.00,
+    status: 'paid'
+  },
+  {
+    id: '4',
+    invoiceNumber: '#INV-2023-094',
+    guestName: 'James Liu',
+    guestInitials: 'JL',
+    guestInitialsBg: 'bg-teal-100',
+    guestInitialsColor: 'text-teal-600',
+    issued: 'Nov 01, 2023',
+    dueDate: 'Nov 15, 2023',
+    amount: 450.00,
+    status: 'unpaid'
+  },
+  {
+    id: '5',
+    invoiceNumber: '#INV-2023-078',
+    guestName: 'Anita Roy',
+    guestInitials: 'AR',
+    guestInitialsBg: 'bg-pink-100',
+    guestInitialsColor: 'text-pink-600',
+    issued: 'Oct 08, 2023',
+    dueDate: 'Oct 22, 2023',
+    amount: 3200.00,
+    status: 'paid'
+  }
+]
+
+export default function InvoicesClient() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [selectedInvoices, setSelectedInvoices] = useState<string[]>([])
+
+  const filteredInvoices = invoicesData.filter(invoice => {
+    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         invoice.guestName.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = !statusFilter || invoice.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const toggleSelectAll = () => {
+    if (selectedInvoices.length === filteredInvoices.length) {
+      setSelectedInvoices([])
+    } else {
+      setSelectedInvoices(filteredInvoices.map(inv => inv.id))
+    }
+  }
+
+  const toggleSelectInvoice = (id: string) => {
+    if (selectedInvoices.includes(id)) {
+      setSelectedInvoices(selectedInvoices.filter(invId => invId !== id))
+    } else {
+      setSelectedInvoices([...selectedInvoices, id])
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    if (status === 'overdue') {
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800'
+    } else if (status === 'unpaid') {
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+    } else {
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1)
+  }
+
+  return (
+    <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark">
+      <Sidebar title="TravelCorp" logoIcon="apartment" />
+      
+      <main className="flex-1 flex flex-col h-full overflow-hidden">
+        <Header />
+        
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 scroll-smooth">
+          <div className="mx-auto max-w-7xl flex flex-col gap-6">
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-2 text-sm">
+              <a className="text-slate-500 hover:text-primary dark:text-gray-400" href="#">Dashboard</a>
+              <span className="text-gray-300 dark:text-gray-600">/</span>
+              <span className="font-semibold text-slate-900 dark:text-white">Invoice History</span>
+            </nav>
+
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+                  Invoice History &amp; Tracking
+                </h1>
+                <p className="text-slate-500 dark:text-gray-400 max-w-2xl">
+                  View and manage your hotel invoices, track payment status, and process outstanding balances securely.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button className="hidden md:flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                  <span className="material-symbols-outlined text-[20px]">download</span>
+                  Export CSV
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white font-bold hover:bg-blue-600 transition-colors shadow-md shadow-primary/20">
+                  <span className="material-symbols-outlined text-[20px]">credit_card</span>
+                  Pay Selected
+                </button>
+              </div>
+            </div>
+
+            {/* Filters & Search */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-5">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                {/* Search */}
+                <div className="md:col-span-4 lg:col-span-5">
+                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">Search</label>
+                  <div className="relative">
+                    <input
+                      className="w-full h-11 pl-11 pr-4 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                      placeholder="Search by Guest Name or Invoice #"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      type="text"
+                    />
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500">
+                      <span className="material-symbols-outlined text-[20px]">search</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Start Date */}
+                <div className="md:col-span-3 lg:col-span-2">
+                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">Start Date</label>
+                  <input
+                    className="w-full h-11 px-3 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                {/* End Date */}
+                <div className="md:col-span-3 lg:col-span-2">
+                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">End Date</label>
+                  <input
+                    className="w-full h-11 px-3 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+
+                {/* Status Filter */}
+                <div className="md:col-span-2 lg:col-span-3">
+                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-1.5">Status</label>
+                  <div className="relative">
+                    <select
+                      className="w-full h-11 pl-3 pr-10 rounded-lg border border-slate-300 dark:border-gray-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none text-sm cursor-pointer"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="unpaid">Unpaid</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="paid">Paid</option>
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+                      <span className="material-symbols-outlined text-[20px]">arrow_drop_down</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden flex flex-col">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-gray-700">
+                      <th className="py-4 pl-6 pr-3 w-[40px]">
+                        <input
+                          className="rounded border-slate-300 text-primary focus:ring-primary/20 dark:bg-slate-700 dark:border-gray-600 size-4 cursor-pointer"
+                          type="checkbox"
+                          checked={selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Invoice #</th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Guest Name</th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Issued</th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Due Date</th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right">Amount</th>
+                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-center">Status</th>
+                      <th className="py-4 pl-3 pr-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-gray-700">
+                    {filteredInvoices.map((invoice) => (
+                      <tr key={invoice.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="py-4 pl-6 pr-3">
+                          <input
+                            className="rounded border-slate-300 text-primary focus:ring-primary/20 dark:bg-slate-700 dark:border-gray-600 size-4 cursor-pointer"
+                            type="checkbox"
+                            checked={selectedInvoices.includes(invoice.id)}
+                            onChange={() => toggleSelectInvoice(invoice.id)}
+                          />
+                        </td>
+                        <td className="py-4 px-3">
+                          <a className="font-bold text-primary hover:underline text-sm tabular-nums" href="#">
+                            {invoice.invoiceNumber}
+                          </a>
+                        </td>
+                        <td className="py-4 px-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-8 rounded-full ${invoice.guestInitialsBg} ${invoice.guestInitialsColor} flex items-center justify-center font-bold text-xs`}>
+                              {invoice.guestInitials}
+                            </div>
+                            <span className="text-sm font-medium text-slate-900 dark:text-white">{invoice.guestName}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-3 text-sm text-slate-600 dark:text-gray-400 tabular-nums">{invoice.issued}</td>
+                        <td className="py-4 px-3 text-sm font-medium text-slate-900 dark:text-gray-300 tabular-nums">
+                          {invoice.status === 'overdue' && <span className="text-red-600 dark:text-red-400">{invoice.dueDate}</span>}
+                          {invoice.status !== 'overdue' && invoice.dueDate}
+                        </td>
+                        <td className="py-4 px-3 text-sm font-bold text-slate-900 dark:text-white text-right tabular-nums">
+                          ${invoice.amount.toFixed(2)}
+                        </td>
+                        <td className="py-4 px-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusBadge(invoice.status)}`}>
+                            {getStatusLabel(invoice.status)}
+                          </span>
+                        </td>
+                        <td className="py-4 pl-3 pr-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link href={`/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`} className="p-1.5 text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="View Details">
+                              <span className="material-symbols-outlined text-[20px]">visibility</span>
+                            </Link>
+                            {invoice.status !== 'paid' && (
+                              <Link href={`/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`} className="px-3 py-1.5 bg-primary hover:bg-blue-600 text-white text-xs font-bold rounded shadow-sm shadow-primary/30 transition-colors">
+                                Pay Now
+                              </Link>
+                            )}
+                            {invoice.status === 'paid' && (
+                              <span className="px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-gray-600 select-none">
+                                Completed
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+                <div className="text-sm text-slate-600 dark:text-gray-400">
+                  Showing <span className="font-bold text-slate-900 dark:text-white">1-{filteredInvoices.length}</span> of <span className="font-bold text-slate-900 dark:text-white">48</span> invoices
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-500 hover:text-primary hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                  </button>
+                  <button className="size-9 rounded-lg bg-primary text-white font-bold text-sm shadow-sm shadow-primary/30">1</button>
+                  <button className="size-9 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-500 hover:border-primary hover:text-primary font-medium text-sm transition-colors">2</button>
+                  <button className="size-9 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-500 hover:border-primary hover:text-primary font-medium text-sm transition-colors">3</button>
+                  <span className="text-gray-400 px-1">...</span>
+                  <button className="size-9 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-500 hover:border-primary hover:text-primary font-medium text-sm transition-colors">10</button>
+                  <button className="p-2 rounded-lg border border-slate-200 dark:border-gray-700 text-slate-500 hover:text-primary hover:border-primary transition-colors">
+                    <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
 export interface SidebarProps {
@@ -10,6 +11,22 @@ export interface SidebarProps {
 
 export default function Sidebar({ title, logoIcon }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const pathname = usePathname()
+  
+  // Determine which portal we're in
+  const isHotelFinance = pathname.includes('/hotel-finance')
+  const isCorporatePortal = pathname.includes('/corporate-portal')
+  
+  const dashboardHref = isCorporatePortal ? '/corporate-portal' : (isHotelFinance ? '/hotel-finance' : '#')
+  const invoicesHref = isCorporatePortal ? '/corporate-portal/invoices' : '#'
+  const organizationsHref = isHotelFinance ? '/hotel-finance/organizations' : '#'
+  const guestsHref = isCorporatePortal ? '/corporate-portal/guests' : '#'
+  
+  // Determine active states
+  const isDashboardActive = pathname === dashboardHref
+  const isInvoicesActive = pathname === invoicesHref
+  const isOrganizationsActive = pathname === organizationsHref
+  const isGuestsActive = pathname === guestsHref
 
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 border-r border-[#e7ecf3] dark:border-slate-800 bg-white dark:bg-[#161f2c] hidden lg:flex flex-col transition-all duration-300`}>
@@ -29,18 +46,28 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
         </div>
       </button>
       <div className="flex flex-col flex-1 p-4 gap-2 overflow-y-auto">
-        <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary hover:shadow-sm transition-all ${isCollapsed ? 'justify-center' : ''}`} href="#">
+        <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${isDashboardActive ? 'bg-primary/10 text-primary hover:shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isCollapsed ? 'justify-center' : ''}`} href={dashboardHref}>
           <span className="material-symbols-outlined text-[22px]" style={{fontVariationSettings: "'FILL' 1"}}>dashboard</span>
           <p className={`text-sm font-semibold transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Dashboard</p>
-        </a>
-        <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
-          <span className="material-symbols-outlined text-[22px]">receipt_long</span>
-          <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Invoices</p>
-        </a>
-        <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="/hotel-finance/organizations">
-          <span className="material-symbols-outlined text-[22px]">business_center</span>
-          <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Organizations</p>
         </Link>
+        {isCorporatePortal && (
+          <>
+            <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isInvoicesActive ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isCollapsed ? 'justify-center' : ''}`} href={invoicesHref}>
+              <span className="material-symbols-outlined text-[22px]">receipt_long</span>
+              <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Invoices</p>
+            </Link>
+            <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isGuestsActive ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isCollapsed ? 'justify-center' : ''}`} href={guestsHref}>
+              <span className="material-symbols-outlined text-[22px]">groups</span>
+              <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Guests</p>
+            </Link>
+          </>
+        )}
+        {isHotelFinance && (
+          <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isOrganizationsActive ? 'bg-primary/10 text-primary' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'} ${isCollapsed ? 'justify-center' : ''}`} href={organizationsHref}>
+            <span className="material-symbols-outlined text-[22px]">business_center</span>
+            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Organizations</p>
+          </Link>
+        )}
         <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
           <span className="material-symbols-outlined text-[22px]">bar_chart</span>
           <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Reports</p>
