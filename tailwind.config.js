@@ -23,7 +23,7 @@ module.exports = {
         'text-sub-dark': '#94A3B8',
       },
       fontFamily: {
-        display: ['Manrope', 'sans-serif'],
+        display: ['var(--font-manrope)', 'sans-serif'],
       },
     },
   },
