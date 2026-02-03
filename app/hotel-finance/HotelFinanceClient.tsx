@@ -1,85 +1,16 @@
 "use client"
 
-import Link from 'next/link'
-import { useState } from 'react'
+import Header from '@/app/components/Header'
+import Sidebar from '@/app/components/Sidebar'
 
 export default function HotelFinanceClient() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark transition-colors duration-200">
-      {/* Sidebar */}
-      <aside className={`${isCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 border-r border-[#e7ecf3] dark:border-slate-800 bg-white dark:bg-[#161f2c] hidden lg:flex flex-col transition-all duration-300`}>
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((prev) => !prev)}
-          className="h-16 flex items-center px-6 border-b border-[#e7ecf3] dark:border-slate-800 group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-        >
-          <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center w-full' : ''}`}>
-            <div
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 ring-2 ring-transparent group-hover:ring-primary/30 transition-all"
-              style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCwm9cQ0Z_hJGCRfhC8xIumNZQGzbtTe2Zrx9p8pnPNpfC_ZlsxZh9bM-aPkYBndBmwlW1Kt5hbZYKoRvPHn4j62IXht4K_fxrf6xjGr3-diDRweFMNOBaWlRHc5EBw-_dsUGhhLWpS87kva_xOF17HQGrmg9M9vAIIvej5V2xHlTb3FYOuhFyMorLFt0ULxBSvZz0MoMvN9jZMYK66zpwQDQo-ITkw4Jg29rx6tcL81zTw8EtGMiftXr-JfInsARJBMxVudfceSpZ-")'}}
-            ></div>
-            <h1 className={`text-[#0d131b] dark:text-white text-lg font-bold tracking-tight transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-              Hotel Finance
-            </h1>
-          </div>
-        </button>
-        <div className="flex flex-col flex-1 p-4 gap-2 overflow-y-auto">
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary hover:shadow-sm transition-all ${isCollapsed ? 'justify-center' : ''}`} href="#">
-            <span className="material-symbols-outlined text-[22px]" style={{fontVariationSettings: "'FILL' 1"}}>dashboard</span>
-            <p className={`text-sm font-semibold transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Dashboard</p>
-          </a>
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
-            <span className="material-symbols-outlined text-[22px]">receipt_long</span>
-            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Invoices</p>
-          </a>
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
-            <span className="material-symbols-outlined text-[22px]">business_center</span>
-            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Organizations</p>
-          </a>
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
-            <span className="material-symbols-outlined text-[22px]">bar_chart</span>
-            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Reports</p>
-          </a>
-        </div>
-        <div className="p-4 border-t border-[#e7ecf3] dark:border-slate-800">
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="#">
-            <span className="material-symbols-outlined text-[22px]">settings</span>
-            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Settings</p>
-          </a>
-          <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isCollapsed ? 'justify-center' : ''}`} href="/">
-            <span className="material-symbols-outlined text-[22px]">logout</span>
-            <p className={`text-sm font-medium transition-all ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>Log Out</p>
-          </Link>
-        </div>
-      </aside>
+      <Sidebar title="Hotel Finance" logoIcon="domain" />
       
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
-        {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-8 border-b border-[#e7ecf3] dark:border-slate-800 bg-white dark:bg-[#161f2c] flex-shrink-0 z-10">
-          <div className="flex items-center w-full max-w-md">
-            <div className="relative w-full text-slate-400 focus-within:text-primary">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <span className="material-symbols-outlined">search</span>
-              </div>
-              <input className="block w-full rounded-lg border-none bg-slate-100 dark:bg-slate-800 py-2 pl-10 pr-3 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6 transition-all" placeholder="Search (Ctrl + /)" type="text" />
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 group">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Sarah Jenkins</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Product Designer</p>
-              </div>
-              <div
-                className="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border-2 border-white dark:border-slate-700 shadow-sm"
-                style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB48jMTkPZ0nor87Nv5RNKgPXMFnVqWZSnyHVnj2Az1T5bnChp6bjU5-sA6Inh4lDzcs1PvBkppXgRJ9dxM6NMyqUT6yy1HEPDUAdQYKgHxxW89PsnxqBbFJoCCTMAhBnNHhnvUvN1hjUDvyqdK_O_2VL68tXcFyoou8MWDiQGij-W0jaUMHXuCxv7Opt3XKBKWdIqrvQEylqYlEQFLz6pNKMYaPR0WXNb-oNxc2svT_iRXyClrQBIJbzRxWycB4bfKKMAnXHHedazR")'}}
-              ></div>
-            </div>
-          </div>
-        </header>
+        <Header />
         
         {/* Scrollable Page Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 scroll-smooth">
