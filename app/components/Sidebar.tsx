@@ -21,15 +21,17 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
   const dashboardHref = isCorporatePortal ? '/corporate-portal' : (isHotelFinance ? '/hotel-finance' : '#')
   const invoicesHref = isCorporatePortal ? '/corporate-portal/invoices' : '#'
   const organizationsHref = isHotelFinance ? '/hotel-finance/organizations' : '#'
-  const guestsHref = isCorporatePortal ? '/corporate-portal/guests' : '#'
+  const employeeStaysHref = isCorporatePortal ? '/corporate-portal/employee-stays' : '#'
   const reportsHref = isCorporatePortal ? '/corporate-portal/reports' : '#'
+  const settingsHref = isCorporatePortal ? '/corporate-portal/settings' : '#'
   
   // Determine active states
   const isDashboardActive = pathname === dashboardHref
   const isInvoicesActive = pathname === invoicesHref
   const isOrganizationsActive = pathname === organizationsHref
-  const isGuestsActive = pathname === guestsHref
+  const isEmployeeStaysActive = pathname === employeeStaysHref
   const isReportsActive = pathname === reportsHref
+  const isSettingsActive = pathname === settingsHref
 
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 border-r border-[#e7ecf3] dark:border-slate-800 bg-white dark:bg-[#161f2c] hidden lg:flex flex-col transition-all duration-500 ease-in-out shadow-lg`}>
@@ -107,21 +109,21 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
             </div>
             <div 
               className="relative"
-              onMouseEnter={() => isCollapsed && setShowTooltip('guests')}
+              onMouseEnter={() => isCollapsed && setShowTooltip('employee-stays')}
               onMouseLeave={() => setShowTooltip(null)}
             >
-              <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group/link ${isGuestsActive ? 'bg-primary/10 text-primary hover:shadow-md hover:shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:translate-x-1'} ${isCollapsed ? 'justify-center' : ''}`} href={guestsHref}>
-                <span className={`material-symbols-outlined text-[22px] transition-transform duration-300 ${isCollapsed ? 'group-hover/link:scale-125' : ''}`}>groups</span>
-                <p className={`text-sm font-medium transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-75'}`}>Guests</p>
+              <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group/link ${isEmployeeStaysActive ? 'bg-primary/10 text-primary hover:shadow-md hover:shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:translate-x-1'} ${isCollapsed ? 'justify-center' : ''}`} href={employeeStaysHref}>
+                <span className={`material-symbols-outlined text-[22px] transition-transform duration-300 ${isCollapsed ? 'group-hover/link:scale-125' : ''}`}>hotel</span>
+                <p className={`text-sm font-medium transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-75'}`}>Employee Stays</p>
                 {!isCollapsed && (
-                  <span className={`material-symbols-outlined text-[16px] ml-auto opacity-0 -translate-x-2 transition-all duration-300 ${isGuestsActive ? 'group-hover/link:opacity-100 group-hover/link:translate-x-0' : 'group-hover/link:opacity-100 group-hover/link:translate-x-0'}`}>
+                  <span className={`material-symbols-outlined text-[16px] ml-auto opacity-0 -translate-x-2 transition-all duration-300 ${isEmployeeStaysActive ? 'group-hover/link:opacity-100 group-hover/link:translate-x-0' : 'group-hover/link:opacity-100 group-hover/link:translate-x-0'}`}>
                     arrow_forward
                   </span>
                 )}
               </Link>
-              {isCollapsed && showTooltip === 'guests' && (
+              {isCollapsed && showTooltip === 'employee-stays' && (
                 <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg animate-in fade-in slide-in-from-left-1 duration-200">
-                  Guests
+                  Employee Stays
                 </div>
               )}
             </div>
@@ -182,21 +184,28 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
             </p>
           </div>
         )}
-        <div 
-          className="relative"
-          onMouseEnter={() => isCollapsed && setShowTooltip('settings')}
-          onMouseLeave={() => setShowTooltip(null)}
-        >
-          <a className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-300 group/link hover:translate-x-1 ${isCollapsed ? 'justify-center hover:translate-x-0' : ''}`} href="#">
-            <span className={`material-symbols-outlined text-[22px] transition-all duration-500 group-hover/link:rotate-90 ${isCollapsed ? 'group-hover/link:scale-125' : ''}`}>settings</span>
-            <p className={`text-sm font-medium transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-75'}`}>Settings</p>
-          </a>
-          {isCollapsed && showTooltip === 'settings' && (
-            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg animate-in fade-in slide-in-from-left-1 duration-200">
-              Settings
-            </div>
-          )}
-        </div>
+        {isCorporatePortal && (
+          <div 
+            className="relative mb-2"
+            onMouseEnter={() => isCollapsed && setShowTooltip('settings')}
+            onMouseLeave={() => setShowTooltip(null)}
+          >
+            <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 group/link ${isSettingsActive ? 'bg-primary/10 text-primary hover:shadow-md hover:shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:translate-x-1'} ${isCollapsed ? 'justify-center' : ''}`} href={settingsHref}>
+              <span className={`material-symbols-outlined text-[22px] transition-transform duration-300 ${isCollapsed ? 'group-hover/link:scale-125' : ''}`}>settings</span>
+              <p className={`text-sm font-medium transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-75'}`}>Settings</p>
+              {!isCollapsed && (
+                <span className={`material-symbols-outlined text-[16px] ml-auto opacity-0 -translate-x-2 transition-all duration-300 ${isSettingsActive ? 'group-hover/link:opacity-100 group-hover/link:translate-x-0' : 'group-hover/link:opacity-100 group-hover/link:translate-x-0'}`}>
+                  arrow_forward
+                </span>
+              )}
+            </Link>
+            {isCollapsed && showTooltip === 'settings' && (
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg animate-in fade-in slide-in-from-left-1 duration-200">
+                Settings
+              </div>
+            )}
+          </div>
+        )}
         <div 
           className="relative"
           onMouseEnter={() => isCollapsed && setShowTooltip('logout')}
