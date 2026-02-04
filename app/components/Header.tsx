@@ -14,13 +14,16 @@ export default function Header() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3 group">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">Sarah Jenkins</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Product Designer</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">BaikalSphere</p>
           </div>
-          <div
-            className="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border-2 border-white dark:border-slate-700 shadow-sm"
-            style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB48jMTkPZ0nor87Nv5RNKgPXMFnVqWZSnyHVnj2Az1T5bnChp6bjU5-sA6Inh4lDzcs1PvBkppXgRJ9dxM6NMyqUT6yy1HEPDUAdQYKgHxxW89PsnxqBbFJoCCTMAhBnNHhnvUvN1hjUDvyqdK_O_2VL68tXcFyoou8MWDiQGij-W0jaUMHXuCxv7Opt3XKBKWdIqrvQEylqYlEQFLz6pNKMYaPR0WXNb-oNxc2svT_iRXyClrQBIJbzRxWycB4bfKKMAnXHHedazR")'}}
-          ></div>
+          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-600 shadow-sm">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" opacity="0.3" stroke="white" strokeWidth="2" fill="none" />
+              <circle cx="12" cy="12" r="6" opacity="0.6" stroke="white" strokeWidth="1.5" fill="none" />
+              <circle cx="12" cy="12" r="3" fill="white" />
+              <path d="M12 3 Q 19 8 19 12 Q 19 16 12 21" stroke="white" strokeWidth="1" opacity="0.5" fill="none" />
+            </svg>
+          </div>
         </div>
       </div>
     </header>
