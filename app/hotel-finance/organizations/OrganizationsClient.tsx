@@ -3,6 +3,7 @@
 import Header from '@/app/components/Header'
 import Sidebar from '@/app/components/Sidebar'
 import { useState } from 'react'
+import Link from 'next/link'
 
 const organizationsData = [
   {
@@ -157,7 +158,7 @@ export default function OrganizationsClient() {
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Credit Period</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Terms</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                      <th className="whitespace-nowrap px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
+                      <th className="whitespace-nowrap px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reconciliation</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -204,14 +205,11 @@ export default function OrganizationsClient() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button className="flex size-8 items-center justify-center rounded hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700">
-                              <span className="material-symbols-outlined text-lg">edit</span>
+                          <Link href={`/hotel-finance/organizations/${org.id}`}>
+                            <button className="flex h-10 items-center justify-center rounded-lg bg-primary px-6 text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-blue-600 focus:ring-4 focus:ring-blue-500/30">
+                              <span className="text-sm font-bold leading-normal">Reconcile</span>
                             </button>
-                            <button className="flex size-8 items-center justify-center rounded hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700">
-                              <span className="material-symbols-outlined text-lg">more_vert</span>
-                            </button>
-                          </div>
+                          </Link>
                         </td>
                       </tr>
                     ))}

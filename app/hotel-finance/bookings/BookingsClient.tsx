@@ -4,6 +4,7 @@ import Header from '@/app/components/Header'
 import Sidebar from '@/app/components/Sidebar'
 import Link from 'next/link'
 import { useState } from 'react'
+import InvoiceAutomationWorkflow from './InvoiceAutomationWorkflow'
 
 interface Booking {
   id: string
@@ -103,49 +104,31 @@ const mockBookings: Booking[] = [
 export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>(mockBookings)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [showWorkflow, setShowWorkflow] = useState(false)
+  const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState<Booking | null>(null)
 
-  const handleCheckout = (bookingId: string) => {
-    setBookings(bookings.map(booking => 
-      booking.id === bookingId 
-        ? { ...booking, status: 'checked-out' }
-        : booking
-    ))
+  const handleCheckout = (booking: Booking) => {
+    setSelectedBookingForCheckout(booking)
+    setShowWorkflow(true)
+  }
+
+  const handleWorkflowClose = () => {
+    setShowWorkflow(false)
+    setSelectedBookingForCheckout(null)
+    // Mark booking as checked-out after workflow completion
+    if (selectedBookingForCheckout) {
+      setBookings(bookings.map(b =>
+        b.id === selectedBookingForCheckout.id
+          ? { ...b, status: 'checked-out' }
+          : b
+      ))
+    }
   }
 
   const filteredBookings = bookings.filter(booking => {
     if (selectedFilter === 'all') return true
     return booking.status === selectedFilter
   })
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400'
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-      case 'checked-in':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-      case 'checked-out':
-        return 'bg-slate-100 text-slate-800 dark:bg-slate-900/20 dark:text-slate-400'
-      default:
-        return 'bg-slate-100 text-slate-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'schedule'
-      case 'confirmed':
-        return 'check_circle'
-      case 'checked-in':
-        return 'login'
-      case 'checked-out':
-        return 'logout'
-      default:
-        return 'help'
-    }
-  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark transition-colors duration-200">
@@ -205,7 +188,6 @@ export default function BookingsClient() {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Check-out</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Room Type</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Total</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Status</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Action</th>
                     </tr>
                   </thead>
@@ -242,24 +224,15 @@ export default function BookingsClient() {
                           <td className="px-6 py-4 text-sm font-semibold text-text-main-light dark:text-text-main-dark">
                             ${booking.totalPrice.toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 text-sm">
-                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${getStatusBadgeColor(booking.status)}`}>
-                              <span className="material-symbols-outlined text-[16px]" style={{fontSize: '16px'}}>
-                                {getStatusIcon(booking.status)}
-                              </span>
-                              <span className="text-xs font-semibold">
-                                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1).replace('-', ' ')}
-                              </span>
-                            </div>
-                          </td>
                           <td className="px-6 py-4">
                             {booking.status !== 'checked-out' && (
-                              <Link href={`/hotel-finance/bookings/${booking.id}`}>
-                                <button className="flex items-center gap-2 px-3 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-primary/30">
-                                  <span className="material-symbols-outlined text-[18px]">logout</span>
-                                  <span className="hidden sm:inline">Checkout</span>
-                                </button>
-                              </Link>
+                              <button 
+                                onClick={() => handleCheckout(booking)}
+                                className="flex items-center gap-2 px-3 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-primary/30"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">logout</span>
+                                <span className="hidden sm:inline">Checkout</span>
+                              </button>
                             )}
                             {booking.status === 'checked-out' && (
                               <span className="text-xs text-slate-500 dark:text-slate-400">Completed</span>
@@ -269,7 +242,7 @@ export default function BookingsClient() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={9} className="px-6 py-8 text-center text-text-sub-light dark:text-text-sub-dark">
+                        <td colSpan={8} className="px-6 py-8 text-center text-text-sub-light dark:text-text-sub-dark">
                           <div className="flex flex-col items-center gap-2">
                             <span className="material-symbols-outlined text-[48px] opacity-40">inbox</span>
                             <p className="text-sm font-medium">No bookings found</p>
@@ -326,6 +299,17 @@ export default function BookingsClient() {
           </div>
         </div>
       </main>
+
+      {/* Invoice Automation Workflow Modal */}
+      {showWorkflow && selectedBookingForCheckout && (
+        <InvoiceAutomationWorkflow
+          bookingId={selectedBookingForCheckout.bookingNumber}
+          customerName={selectedBookingForCheckout.customerName}
+          corporationName={selectedBookingForCheckout.corporationName}
+          totalAmount={selectedBookingForCheckout.totalPrice}
+          onClose={handleWorkflowClose}
+        />
+      )}
     </div>
   )
 }
