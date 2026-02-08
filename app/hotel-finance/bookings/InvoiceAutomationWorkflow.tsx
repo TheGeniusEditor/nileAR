@@ -95,7 +95,7 @@ export default function InvoiceAutomationWorkflow({
     {
       id: 6,
       title: 'E-Invoice',
-      description: 'Generate E-Invoice if GST/AR applicable',
+      description: 'Generate E-Invoice if GST applicable',
       completed: false
     },
     {
@@ -164,8 +164,8 @@ export default function InvoiceAutomationWorkflow({
     setWorkflowData(prev => ({ ...prev, ...updatedData }))
     markStepComplete(4)
     
-    // Check if E-Invoice is needed (either GST or AR)
-    if (hasGST || hasAR) {
+    // Check if E-Invoice is needed (only if booking is GST supporting)
+    if (hasGST) {
       setCurrentStep(5)
     } else {
       setCurrentStep(6)
