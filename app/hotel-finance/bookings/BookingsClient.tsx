@@ -5,8 +5,6 @@ import Sidebar from '@/app/components/Sidebar'
 import Link from 'next/link'
 import { useState } from 'react'
 import InvoiceAutomationWorkflow from './InvoiceAutomationWorkflow'
-import DocumentAttachmentModal from './DocumentAttachmentModal'
-import MailPreviewModal from './MailPreviewModal'
 
 interface Booking {
   id: string
@@ -21,13 +19,6 @@ interface Booking {
   totalPrice: number
   status: 'pending' | 'confirmed' | 'checked-in' | 'checked-out'
   gstApplicable: boolean
-}
-
-interface AttachedDocuments {
-  arCoveringLetter?: File
-  eInvoice?: File
-  pmsInvoice?: File
-  posSupporting?: File
 }
 
 const mockBookings: Booking[] = [
@@ -122,42 +113,10 @@ export default function BookingsClient() {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState<Booking | null>(null)
-  const [showAttachmentModal, setShowAttachmentModal] = useState(false)
-  const [showMailPreview, setShowMailPreview] = useState(false)
-  const [selectedBookingForAttach, setSelectedBookingForAttach] = useState<Booking | null>(null)
-  const [attachedDocuments, setAttachedDocuments] = useState<AttachedDocuments>({})
 
   const handleCheckout = (booking: Booking) => {
     setSelectedBookingForCheckout(booking)
     setShowWorkflow(true)
-  }
-
-  const handleAttach = (booking: Booking) => {
-    setSelectedBookingForAttach(booking)
-    setShowAttachmentModal(true)
-  }
-
-  const handleAttachmentClose = (documents?: AttachedDocuments) => {
-    if (documents) {
-      setAttachedDocuments(documents)
-    }
-    setShowAttachmentModal(false)
-  }
-
-  const handleSend = (booking: Booking) => {
-    if (Object.keys(attachedDocuments).length === 0) {
-      alert('Please attach documents before sending')
-      return
-    }
-    setSelectedBookingForAttach(booking)
-    setShowMailPreview(true)
-  }
-
-  const handleMailSent = () => {
-    setShowMailPreview(false)
-    setAttachedDocuments({})
-    setSelectedBookingForAttach(null)
-    alert('Email sent successfully!')
   }
 
   const filteredBookings = bookings.filter(booking => {
@@ -249,20 +208,20 @@ export default function BookingsClient() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-2 flex-wrap">
-                              <button 
-                                onClick={() => handleAttach(booking)}
+                              <Link 
+                                href={`/hotel-finance/bookings/${booking.id}/attach`}
                                 className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-semibold transition-all duration-200"
                               >
                                 <span className="material-symbols-outlined text-[18px]">attach_file</span>
                                 <span className="hidden sm:inline">Attach</span>
-                              </button>
-                              <button 
-                                onClick={() => handleSend(booking)}
+                              </Link>
+                              <Link 
+                                href={`/hotel-finance/bookings/${booking.id}/send`}
                                 className="flex items-center gap-2 px-3 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-primary/30"
                               >
                                 <span className="material-symbols-outlined text-[18px]">send</span>
                                 <span className="hidden sm:inline">Send</span>
-                              </button>
+                              </Link>
                             </div>
                           </td>
                         </tr>
@@ -341,24 +300,6 @@ export default function BookingsClient() {
         />
       )}
 
-      {/* Document Attachment Modal */}
-      {showAttachmentModal && selectedBookingForAttach && (
-        <DocumentAttachmentModal
-          booking={selectedBookingForAttach}
-          gstApplicable={selectedBookingForAttach.gstApplicable}
-          onClose={handleAttachmentClose}
-        />
-      )}
-
-      {/* Mail Preview Modal */}
-      {showMailPreview && selectedBookingForAttach && (
-        <MailPreviewModal
-          booking={selectedBookingForAttach}
-          attachedDocuments={attachedDocuments}
-          onClose={() => setShowMailPreview(false)}
-          onSend={handleMailSent}
-        />
-      )}
     </div>
   )
 }

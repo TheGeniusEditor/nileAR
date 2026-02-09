@@ -18,6 +18,7 @@ interface Booking {
 }
 
 interface AttachedDocuments {
+  ledgerStatement?: File
   arCoveringLetter?: File
   eInvoice?: File
   pmsInvoice?: File
@@ -34,6 +35,7 @@ export default function DocumentAttachmentModal({
   onClose: (documents?: AttachedDocuments) => void 
 }) {
   const [attachedDocuments, setAttachedDocuments] = useState<AttachedDocuments>({})
+  const ledgerStatementRef = useRef<HTMLInputElement>(null)
   const arCoveringLetterRef = useRef<HTMLInputElement>(null)
   const eInvoiceRef = useRef<HTMLInputElement>(null)
   const pmsInvoiceRef = useRef<HTMLInputElement>(null)
@@ -59,8 +61,15 @@ export default function DocumentAttachmentModal({
 
   const documentTypes = [
     {
+      key: 'ledgerStatement' as keyof AttachedDocuments,
+      label: 'Ledger Statement',
+      ref: ledgerStatementRef,
+      icon: 'account_balance',
+      required: true
+    },
+    {
       key: 'arCoveringLetter' as keyof AttachedDocuments,
-      label: 'AR covering Letter / Ledger Statement',
+      label: 'AR Covering Letter',
       ref: arCoveringLetterRef,
       icon: 'description',
       required: true
@@ -82,7 +91,7 @@ export default function DocumentAttachmentModal({
     },
     {
       key: 'posSupporting' as keyof AttachedDocuments,
-      label: 'POS supporting e-invoice',
+      label: 'POS Supporting',
       ref: posSupportingRef,
       icon: 'article',
       required: true

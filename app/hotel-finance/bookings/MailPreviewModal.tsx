@@ -18,6 +18,7 @@ interface Booking {
 }
 
 interface AttachedDocuments {
+  ledgerStatement?: File
   arCoveringLetter?: File
   eInvoice?: File
   pmsInvoice?: File
@@ -184,6 +185,19 @@ export default function MailPreviewModal({
               Attachments ({attachmentCount})
             </label>
             <div className="space-y-2">
+              {attachedDocuments.ledgerStatement && (
+                <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                  <span className="material-symbols-outlined text-primary text-[20px]">attach_file</span>
+                  <div className="text-sm">
+                    <p className="font-semibold text-text-main-light dark:text-text-main-dark">
+                      {attachedDocuments.ledgerStatement.name}
+                    </p>
+                    <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
+                      Ledger Statement
+                    </p>
+                  </div>
+                </div>
+              )}
               {attachedDocuments.arCoveringLetter && (
                 <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
                   <span className="material-symbols-outlined text-primary text-[20px]">attach_file</span>
@@ -192,7 +206,7 @@ export default function MailPreviewModal({
                       {attachedDocuments.arCoveringLetter.name}
                     </p>
                     <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                      AR covering Letter / Ledger Statement
+                      AR Covering Letter
                     </p>
                   </div>
                 </div>
@@ -227,7 +241,7 @@ export default function MailPreviewModal({
                       {attachedDocuments.posSupporting.name}
                     </p>
                     <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                      POS supporting e-invoice
+                      POS Supporting
                     </p>
                   </div>
                 </div>
