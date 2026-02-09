@@ -34,7 +34,7 @@ export default function Home() {
         <div className="grid gap-8 sm:grid-cols-2 mb-12">
           {/* Corporate Portal Card */}
           <Link
-            href="/corporate-portal"
+            href="/corporate-portal/login"
             className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:-translate-y-2"
           >
             {/* Card Background */}
@@ -85,7 +85,7 @@ export default function Home() {
 
           {/* Hotel Finance Portal Card */}
           <Link
-            href="/hotel-finance"
+            href="/hotel-finance/login"
             className="group relative rounded-3xl overflow-hidden transition-all duration-500 hover:-translate-y-2"
           >
             {/* Card Background */}
