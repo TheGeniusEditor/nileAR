@@ -155,10 +155,13 @@ export default function InvoiceDetailClient() {
                   <button className="flex items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                     Dispute
                   </button>
-                  <button className="flex items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary hover:bg-blue-700 text-white text-sm font-bold shadow-sm transition-colors gap-2">
+                  <Link
+                    href={`/corporate-portal/invoices/${invoiceId}/checkout`}
+                    className="flex items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary hover:bg-blue-700 text-white text-sm font-bold shadow-sm transition-colors gap-2"
+                  >
                     <span className="material-symbols-outlined text-[20px]">check</span>
                     Approve &amp; Pay
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
