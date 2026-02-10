@@ -27,6 +27,14 @@ export interface AttachedDocumentsMeta {
   posSupporting?: AttachmentMeta
 }
 
+export interface SkippedDocumentsMeta {
+  ledgerStatement?: boolean
+  arCoveringLetter?: boolean
+  eInvoice?: boolean
+  pmsInvoice?: boolean
+  posSupporting?: boolean
+}
+
 export const mockBookings: Booking[] = [
   {
     id: '1',
@@ -136,4 +144,18 @@ export function clearAttachments(bookingId: string) {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(`booking_attachments_${bookingId}`)
   }
+}
+
+export function saveSkippedAttachments(bookingId: string, skipped: SkippedDocumentsMeta) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(`booking_skipped_${bookingId}`, JSON.stringify(skipped))
+  }
+}
+
+export function loadSkippedAttachments(bookingId: string): SkippedDocumentsMeta | null {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(`booking_skipped_${bookingId}`)
+    if (stored) return JSON.parse(stored)
+  }
+  return null
 }

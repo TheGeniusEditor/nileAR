@@ -5,7 +5,7 @@ import Sidebar from '@/app/components/Sidebar'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { getBookingById, saveAttachments, loadAttachments, type Booking, type AttachedDocumentsMeta, type AttachmentMeta } from '../../data'
+import { getBookingById, saveAttachments, loadAttachments, saveSkippedAttachments, loadSkippedAttachments, type Booking, type AttachedDocumentsMeta, type AttachmentMeta, type SkippedDocumentsMeta } from '../../data'
 
 interface DocType {
   key: keyof AttachedDocumentsMeta
@@ -23,6 +23,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
   const router = useRouter()
   const booking = getBookingById(bookingId)
   const [attachments, setAttachments] = useState<AttachedDocumentsMeta>({})
+  const [skipped, setSkipped] = useState<SkippedDocumentsMeta>({})
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [recentlyAttached, setRecentlyAttached] = useState<string | null>(null)
   const fileRefs = {
@@ -33,10 +34,12 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     posSupporting: useRef<HTMLInputElement>(null),
   }
 
-  // Load previously saved attachments
+  // Load previously saved attachments and skipped state
   useEffect(() => {
     const saved = loadAttachments(bookingId)
     if (saved) setAttachments(saved)
+    const savedSkipped = loadSkippedAttachments(bookingId)
+    if (savedSkipped) setSkipped(savedSkipped)
   }, [bookingId])
 
   if (!booking) {
@@ -121,8 +124,10 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
 
   const visibleDocs = documentTypes.filter(d => d.visible)
   const attachedCount = Object.keys(attachments).length
+  const skippedCount = Object.keys(skipped).filter(k => skipped[k as keyof SkippedDocumentsMeta]).length
+  const completedCount = attachedCount + skippedCount
   const totalVisible = visibleDocs.length
-  const progress = totalVisible > 0 ? (attachedCount / totalVisible) * 100 : 0
+  const progress = totalVisible > 0 ? (completedCount / totalVisible) * 100 : 0
 
   const handleFileSelect = (key: keyof AttachedDocumentsMeta, file: File | null) => {
     if (!file) return
@@ -130,6 +135,13 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     const updated = { ...attachments, [key]: meta }
     setAttachments(updated)
     saveAttachments(bookingId, updated)
+    // Remove skip if attaching
+    if (skipped[key]) {
+      const updatedSkipped = { ...skipped }
+      delete updatedSkipped[key]
+      setSkipped(updatedSkipped)
+      saveSkippedAttachments(bookingId, updatedSkipped)
+    }
     setRecentlyAttached(key)
     setTimeout(() => setRecentlyAttached(null), 1500)
   }
@@ -139,6 +151,19 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     delete updated[key]
     setAttachments(updated)
     saveAttachments(bookingId, updated)
+  }
+
+  const handleSkip = (key: keyof SkippedDocumentsMeta) => {
+    const updatedSkipped = { ...skipped, [key]: true }
+    setSkipped(updatedSkipped)
+    saveSkippedAttachments(bookingId, updatedSkipped)
+  }
+
+  const handleUnskip = (key: keyof SkippedDocumentsMeta) => {
+    const updatedSkipped = { ...skipped }
+    delete updatedSkipped[key]
+    setSkipped(updatedSkipped)
+    saveSkippedAttachments(bookingId, updatedSkipped)
   }
 
   const handleDrop = useCallback((key: keyof AttachedDocumentsMeta, e: React.DragEvent) => {
@@ -160,8 +185,8 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
   }
 
   const handleContinueToSend = () => {
-    if (attachedCount === 0) {
-      alert('Please attach at least one document before continuing.')
+    if (completedCount === 0) {
+      alert('Please attach or skip at least one document before continuing.')
       return
     }
     router.push(`/hotel-finance/bookings/${bookingId}/send`)
@@ -236,7 +261,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                   </span>
                 </div>
                 <span className="text-sm font-bold text-primary">
-                  {attachedCount} / {totalVisible} documents
+                  {attachedCount} attached{skippedCount > 0 ? ` • ${skippedCount} skipped` : ''} / {totalVisible} documents
                 </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
@@ -251,6 +276,12 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                   All documents attached — ready to send!
                 </p>
               )}
+              {completedCount === totalVisible && totalVisible > 0 && attachedCount < totalVisible && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[18px]">info</span>
+                  All documents addressed ({skippedCount} skipped) — ready to send
+                </p>
+              )}
             </div>
 
             {/* Document Upload Grid */}
@@ -259,6 +290,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {visibleDocs.map((doc) => {
                   const isAttached = !!attachments[doc.key]
+                  const isSkipped = !!skipped[doc.key] && !isAttached
                   const isDragging = dragOver === doc.key
                   const justAttached = recentlyAttached === doc.key
 
@@ -275,14 +307,16 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                         onDrop={(e) => handleDrop(doc.key, e)}
                         onDragOver={(e) => handleDragOver(doc.key, e)}
                         onDragLeave={() => setDragOver(null)}
-                        onClick={() => !isAttached && fileRefs[doc.key].current?.click()}
+                        onClick={() => !isAttached && !isSkipped && fileRefs[doc.key].current?.click()}
                         className={`
-                          relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer
+                          relative overflow-hidden rounded-xl border-2 transition-all duration-300
                           ${isAttached
-                            ? `border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10`
-                            : isDragging
-                              ? `border-primary bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-lg shadow-blue-500/10`
-                              : `border-dashed border-slate-300 dark:border-slate-600 hover:border-primary dark:hover:border-primary hover:shadow-md bg-surface-light dark:bg-surface-dark`
+                            ? `border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10 cursor-pointer`
+                            : isSkipped
+                              ? `border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 opacity-75`
+                              : isDragging
+                                ? `border-primary bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-lg shadow-blue-500/10 cursor-pointer`
+                                : `border-dashed border-slate-300 dark:border-slate-600 hover:border-primary dark:hover:border-primary hover:shadow-md bg-surface-light dark:bg-surface-dark cursor-pointer`
                           }
                           ${justAttached ? 'ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
                         `}
@@ -290,32 +324,66 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                         <div className="p-5">
                           <div className="flex items-start gap-4">
                             {/* Icon */}
-                            <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${doc.bgColor} flex items-center justify-center transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
-                              <span className={`material-symbols-outlined text-[24px] ${doc.color}`}>
-                                {isAttached ? 'check_circle' : doc.icon}
+                            <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${isSkipped ? 'bg-slate-100 dark:bg-slate-800' : doc.bgColor} flex items-center justify-center transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
+                              <span className={`material-symbols-outlined text-[24px] ${isSkipped ? 'text-slate-400 dark:text-slate-500' : isAttached ? doc.color.replace(/text-\w+-600/, 'text-emerald-600').replace(/text-\w+-400/, 'text-emerald-400') : doc.color}`}>
+                                {isAttached ? 'check_circle' : isSkipped ? 'skip_next' : doc.icon}
                               </span>
                             </div>
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-text-main-light dark:text-text-main-dark">
+                                <h3 className={`font-semibold ${isSkipped ? 'text-text-sub-light dark:text-text-sub-dark line-through' : 'text-text-main-light dark:text-text-main-dark'}`}>
                                   {doc.label}
                                 </h3>
-                                {doc.required && !isAttached && (
+                                {doc.required && !isAttached && !isSkipped && (
                                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded">
                                     Required
                                   </span>
                                 )}
+                                {isSkipped && (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                    Skipped
+                                  </span>
+                                )}
                               </div>
 
-                              {!isAttached ? (
+                              {isSkipped ? (
+                                <div className="mt-2">
+                                  <p className="text-sm text-text-sub-light dark:text-text-sub-dark">This document has been skipped.</p>
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleUnskip(doc.key) }}
+                                      className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                                    >
+                                      <span className="material-symbols-outlined text-[14px]">undo</span>
+                                      Undo Skip
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); fileRefs[doc.key].current?.click() }}
+                                      className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
+                                    >
+                                      <span className="material-symbols-outlined text-[14px]">upload_file</span>
+                                      Attach Instead
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : !isAttached ? (
                                 <div className="mt-2">
                                   <p className="text-sm text-text-sub-light dark:text-text-sub-dark">{doc.description}</p>
-                                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px]">cloud_upload</span>
-                                    Click to browse or drag & drop
-                                  </p>
+                                  <div className="flex items-center justify-between mt-3">
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                      <span className="material-symbols-outlined text-[14px]">cloud_upload</span>
+                                      Click to browse or drag & drop
+                                    </p>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleSkip(doc.key) }}
+                                      className="text-sm font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-400 dark:hover:border-amber-600 transition-colors shadow-sm"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">skip_next</span>
+                                      Skip
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="mt-2">
@@ -373,7 +441,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
               </Link>
               <button
                 onClick={handleContinueToSend}
-                disabled={attachedCount === 0}
+                disabled={completedCount === 0}
                 className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-primary/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
               >
                 <span>Continue to Send</span>
