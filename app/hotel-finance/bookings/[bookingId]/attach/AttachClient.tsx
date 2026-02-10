@@ -5,19 +5,99 @@ import Sidebar from '@/app/components/Sidebar'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { getBookingById, saveAttachments, loadAttachments, saveSkippedAttachments, loadSkippedAttachments, type Booking, type AttachedDocumentsMeta, type AttachmentMeta, type SkippedDocumentsMeta } from '../../data'
+import { getBookingById, saveAttachments, loadAttachments, saveSkippedAttachments, loadSkippedAttachments, type AttachedDocumentsMeta, type AttachmentMeta, type SkippedDocumentsMeta } from '../../data'
 
-interface DocType {
+interface BillType {
   key: keyof AttachedDocumentsMeta
   label: string
   icon: string
   description: string
   color: string
   bgColor: string
-  borderColor: string
-  required: boolean
-  visible: boolean
 }
+
+const serviceBillTypes: BillType[] = [
+  {
+    key: 'roomCharges',
+    label: 'Room Charges',
+    icon: 'hotel',
+    description: 'Room tariff & accommodation bill',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+  },
+  {
+    key: 'foodBeverage',
+    label: 'Food & Restaurant',
+    icon: 'restaurant',
+    description: 'Restaurant & dining bills',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+  },
+  {
+    key: 'barLounge',
+    label: 'Bar & Lounge',
+    icon: 'local_bar',
+    description: 'Bar, lounge & beverage service bills',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+  },
+  {
+    key: 'roomService',
+    label: 'Room Service',
+    icon: 'room_service',
+    description: 'In-room dining & service orders',
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/20',
+  },
+  {
+    key: 'laundry',
+    label: 'Laundry & Dry Cleaning',
+    icon: 'local_laundry_service',
+    description: 'Laundry, dry cleaning & pressing bills',
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+  },
+  {
+    key: 'spaWellness',
+    label: 'Spa & Wellness',
+    icon: 'spa',
+    description: 'Spa treatments, gym & wellness charges',
+    color: 'text-pink-600 dark:text-pink-400',
+    bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+  },
+  {
+    key: 'minibar',
+    label: 'Minibar',
+    icon: 'kitchen',
+    description: 'In-room minibar consumption',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+  },
+  {
+    key: 'conferenceHall',
+    label: 'Conference & Banquet',
+    icon: 'groups',
+    description: 'Meeting rooms, conference & banquet hall',
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
+  },
+  {
+    key: 'parking',
+    label: 'Parking & Valet',
+    icon: 'local_parking',
+    description: 'Parking, valet & transportation charges',
+    color: 'text-slate-600 dark:text-slate-400',
+    bgColor: 'bg-slate-100 dark:bg-slate-800/50',
+  },
+  {
+    key: 'miscellaneous',
+    label: 'Miscellaneous',
+    icon: 'more_horiz',
+    description: 'Any other service bills or charges',
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-50 dark:bg-rose-900/20',
+  },
+]
 
 export default function AttachClient({ bookingId }: { bookingId: string }) {
   const router = useRouter()
@@ -26,15 +106,20 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
   const [skipped, setSkipped] = useState<SkippedDocumentsMeta>({})
   const [dragOver, setDragOver] = useState<string | null>(null)
   const [recentlyAttached, setRecentlyAttached] = useState<string | null>(null)
-  const fileRefs = {
-    ledgerStatement: useRef<HTMLInputElement>(null),
-    arCoveringLetter: useRef<HTMLInputElement>(null),
-    eInvoice: useRef<HTMLInputElement>(null),
-    pmsInvoice: useRef<HTMLInputElement>(null),
-    posSupporting: useRef<HTMLInputElement>(null),
-  }
 
-  // Load previously saved attachments and skipped state
+  const fileRefs = {
+    roomCharges: useRef<HTMLInputElement>(null),
+    foodBeverage: useRef<HTMLInputElement>(null),
+    barLounge: useRef<HTMLInputElement>(null),
+    roomService: useRef<HTMLInputElement>(null),
+    laundry: useRef<HTMLInputElement>(null),
+    spaWellness: useRef<HTMLInputElement>(null),
+    minibar: useRef<HTMLInputElement>(null),
+    conferenceHall: useRef<HTMLInputElement>(null),
+    parking: useRef<HTMLInputElement>(null),
+    miscellaneous: useRef<HTMLInputElement>(null),
+  } as Record<string, React.RefObject<HTMLInputElement>>
+
   useEffect(() => {
     const saved = loadAttachments(bookingId)
     if (saved) setAttachments(saved)
@@ -52,7 +137,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
             <div className="text-center">
               <span className="material-symbols-outlined text-[64px] text-slate-300 dark:text-slate-600">error</span>
               <h2 className="text-xl font-bold mt-4">Booking Not Found</h2>
-              <p className="text-text-sub-light dark:text-text-sub-dark mt-2">The booking you're looking for doesn't exist.</p>
+              <p className="text-text-sub-light dark:text-text-sub-dark mt-2">The booking you&apos;re looking for doesn&apos;t exist.</p>
               <Link href="/hotel-finance/bookings" className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold">
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 Back to Bookings
@@ -64,70 +149,11 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     )
   }
 
-  const documentTypes: DocType[] = [
-    {
-      key: 'ledgerStatement',
-      label: 'Ledger Statement',
-      icon: 'account_balance',
-      description: 'Upload the ledger statement for this booking',
-      color: 'text-violet-600 dark:text-violet-400',
-      bgColor: 'bg-violet-50 dark:bg-violet-900/20',
-      borderColor: 'border-violet-200 dark:border-violet-800',
-      required: true,
-      visible: true,
-    },
-    {
-      key: 'arCoveringLetter',
-      label: 'AR Covering Letter',
-      icon: 'description',
-      description: 'Accounts receivable covering letter',
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      required: true,
-      visible: true,
-    },
-    {
-      key: 'eInvoice',
-      label: 'E-Invoice',
-      icon: 'receipt',
-      description: 'GST E-Invoice document',
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-800',
-      required: false,
-      visible: booking.gstApplicable,
-    },
-    {
-      key: 'pmsInvoice',
-      label: 'PMS Invoice',
-      icon: 'receipt_long',
-      description: 'Property Management System invoice',
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-      borderColor: 'border-amber-200 dark:border-amber-800',
-      required: true,
-      visible: true,
-    },
-    {
-      key: 'posSupporting',
-      label: 'POS Supporting',
-      icon: 'article',
-      description: 'Point of Sale supporting document',
-      color: 'text-rose-600 dark:text-rose-400',
-      bgColor: 'bg-rose-50 dark:bg-rose-900/20',
-      borderColor: 'border-rose-200 dark:border-rose-800',
-      required: true,
-      visible: true,
-    },
-  ]
-
-  const visibleDocs = documentTypes.filter(d => d.visible)
   const attachedCount = Object.keys(attachments).length
   const skippedCount = Object.keys(skipped).filter(k => skipped[k as keyof SkippedDocumentsMeta]).length
   const completedCount = attachedCount + skippedCount
-  const totalVisible = visibleDocs.length
-  const progress = totalVisible > 0 ? (completedCount / totalVisible) * 100 : 0
+  const totalBills = serviceBillTypes.length
+  const progress = totalBills > 0 ? (completedCount / totalBills) * 100 : 0
 
   const handleFileSelect = (key: keyof AttachedDocumentsMeta, file: File | null) => {
     if (!file) return
@@ -135,10 +161,9 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     const updated = { ...attachments, [key]: meta }
     setAttachments(updated)
     saveAttachments(bookingId, updated)
-    // Remove skip if attaching
-    if (skipped[key]) {
+    if (skipped[key as keyof SkippedDocumentsMeta]) {
       const updatedSkipped = { ...skipped }
-      delete updatedSkipped[key]
+      delete updatedSkipped[key as keyof SkippedDocumentsMeta]
       setSkipped(updatedSkipped)
       saveSkippedAttachments(bookingId, updatedSkipped)
     }
@@ -171,7 +196,8 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
     setDragOver(null)
     const file = e.dataTransfer.files?.[0]
     if (file) handleFileSelect(key, file)
-  }, [attachments, bookingId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachments, bookingId, skipped])
 
   const handleDragOver = (key: string, e: React.DragEvent) => {
     e.preventDefault()
@@ -185,8 +211,8 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
   }
 
   const handleContinueToSend = () => {
-    if (completedCount === 0) {
-      alert('Please attach or skip at least one document before continuing.')
+    if (attachedCount === 0) {
+      alert('Please attach at least one service bill before continuing.')
       return
     }
     router.push(`/hotel-finance/bookings/${bookingId}/send`)
@@ -211,7 +237,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
               <span className="text-slate-300 dark:text-slate-600">/</span>
               <span className="text-text-main-light dark:text-text-main-dark font-medium">{booking.bookingNumber}</span>
               <span className="text-slate-300 dark:text-slate-600">/</span>
-              <span className="text-primary font-semibold">Attach Documents</span>
+              <span className="text-primary font-semibold">Attach Service Bills</span>
             </div>
 
             {/* Booking Info Card */}
@@ -233,18 +259,15 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                       }`}>
                         {booking.status.replace('-', ' ')}
                       </span>
-                      {booking.gstApplicable && (
-                        <span className="px-2.5 py-1 bg-emerald-400/20 text-emerald-200 rounded-lg text-xs font-bold">GST</span>
-                      )}
                     </div>
                     <h1 className="text-2xl font-bold">{booking.corporationName}</h1>
-                    <p className="text-blue-100 mt-1">Guest: {booking.customerName} • {booking.roomType}</p>
+                    <p className="text-blue-100 mt-1">Guest: {booking.customerName} &bull; {booking.roomType}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-blue-200 text-sm">Total Amount</p>
-                    <p className="text-3xl font-extrabold">₹{booking.totalPrice.toLocaleString()}</p>
+                    <p className="text-3xl font-extrabold">&#8377;{booking.totalPrice.toLocaleString()}</p>
                     <p className="text-blue-200 text-sm mt-1">
-                      {new Date(booking.checkInDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} — {new Date(booking.checkOutDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date(booking.checkInDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} &mdash; {new Date(booking.checkOutDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
                 </div>
@@ -255,13 +278,13 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
             <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">task_alt</span>
+                  <span className="material-symbols-outlined text-primary">receipt_long</span>
                   <span className="font-semibold text-text-main-light dark:text-text-main-dark">
-                    Attachment Progress
+                    Service Bills
                   </span>
                 </div>
                 <span className="text-sm font-bold text-primary">
-                  {attachedCount} attached{skippedCount > 0 ? ` • ${skippedCount} skipped` : ''} / {totalVisible} documents
+                  {attachedCount} attached{skippedCount > 0 ? ` · ${skippedCount} skipped` : ''} / {totalBills} categories
                 </span>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
@@ -270,147 +293,133 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              {attachedCount === totalVisible && totalVisible > 0 && (
+              {attachedCount > 0 && attachedCount + skippedCount >= totalBills && (
                 <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mt-2 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                  All documents attached — ready to send!
-                </p>
-              )}
-              {completedCount === totalVisible && totalVisible > 0 && attachedCount < totalVisible && (
-                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-2 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[18px]">info</span>
-                  All documents addressed ({skippedCount} skipped) — ready to send
+                  All categories addressed — ready to proceed!
                 </p>
               )}
             </div>
 
-            {/* Document Upload Grid */}
+            {/* Service Bills Upload Grid */}
             <div>
-              <h2 className="text-lg font-bold text-text-main-light dark:text-text-main-dark mb-4">Select & Upload Documents</h2>
+              <h2 className="text-lg font-bold text-text-main-light dark:text-text-main-dark mb-1">Attach Service Bills</h2>
+              <p className="text-sm text-text-sub-light dark:text-text-sub-dark mb-4">Upload individual bills for each service the guest used during their stay. Skip any that don&apos;t apply.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {visibleDocs.map((doc) => {
-                  const isAttached = !!attachments[doc.key]
-                  const isSkipped = !!skipped[doc.key] && !isAttached
-                  const isDragging = dragOver === doc.key
-                  const justAttached = recentlyAttached === doc.key
+                {serviceBillTypes.map((bill) => {
+                  const isAttached = !!attachments[bill.key]
+                  const isSkipped = !!skipped[bill.key as keyof SkippedDocumentsMeta] && !isAttached
+                  const isDragging = dragOver === bill.key
+                  const justAttached = recentlyAttached === bill.key
 
                   return (
-                    <div key={doc.key} className="relative">
+                    <div key={bill.key} className="relative">
                       <input
-                        ref={fileRefs[doc.key]}
+                        ref={fileRefs[bill.key]}
                         type="file"
-                        onChange={(e) => handleFileSelect(doc.key, e.target.files?.[0] || null)}
+                        onChange={(e) => handleFileSelect(bill.key, e.target.files?.[0] || null)}
                         className="hidden"
                         accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                       />
                       <div
-                        onDrop={(e) => handleDrop(doc.key, e)}
-                        onDragOver={(e) => handleDragOver(doc.key, e)}
+                        onDrop={(e) => handleDrop(bill.key, e)}
+                        onDragOver={(e) => handleDragOver(bill.key, e)}
                         onDragLeave={() => setDragOver(null)}
-                        onClick={() => !isAttached && !isSkipped && fileRefs[doc.key].current?.click()}
+                        onClick={() => !isAttached && !isSkipped && fileRefs[bill.key]?.current?.click()}
                         className={`
                           relative overflow-hidden rounded-xl border-2 transition-all duration-300
                           ${isAttached
-                            ? `border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10 cursor-pointer`
+                            ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10'
                             : isSkipped
-                              ? `border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 opacity-75`
+                              ? 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 opacity-60'
                               : isDragging
-                                ? `border-primary bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-lg shadow-blue-500/10 cursor-pointer`
-                                : `border-dashed border-slate-300 dark:border-slate-600 hover:border-primary dark:hover:border-primary hover:shadow-md bg-surface-light dark:bg-surface-dark cursor-pointer`
+                                ? 'border-primary bg-blue-50 dark:bg-blue-900/20 scale-[1.02] shadow-lg shadow-blue-500/10'
+                                : 'border-dashed border-slate-300 dark:border-slate-600 hover:border-primary dark:hover:border-primary hover:shadow-md bg-surface-light dark:bg-surface-dark'
                           }
+                          ${!isSkipped ? 'cursor-pointer' : ''}
                           ${justAttached ? 'ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900' : ''}
                         `}
                       >
-                        <div className="p-5">
-                          <div className="flex items-start gap-4">
-                            {/* Icon */}
-                            <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${isSkipped ? 'bg-slate-100 dark:bg-slate-800' : doc.bgColor} flex items-center justify-center transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
-                              <span className={`material-symbols-outlined text-[24px] ${isSkipped ? 'text-slate-400 dark:text-slate-500' : isAttached ? doc.color.replace(/text-\w+-600/, 'text-emerald-600').replace(/text-\w+-400/, 'text-emerald-400') : doc.color}`}>
-                                {isAttached ? 'check_circle' : isSkipped ? 'skip_next' : doc.icon}
+                        <div className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 w-11 h-11 rounded-xl ${isSkipped ? 'bg-slate-100 dark:bg-slate-800' : isAttached ? 'bg-emerald-50 dark:bg-emerald-900/20' : bill.bgColor} flex items-center justify-center transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`}>
+                              <span className={`material-symbols-outlined text-[22px] ${isSkipped ? 'text-slate-400 dark:text-slate-500' : isAttached ? 'text-emerald-600 dark:text-emerald-400' : bill.color}`}>
+                                {isAttached ? 'check_circle' : isSkipped ? 'block' : bill.icon}
                               </span>
                             </div>
 
-                            {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h3 className={`font-semibold ${isSkipped ? 'text-text-sub-light dark:text-text-sub-dark line-through' : 'text-text-main-light dark:text-text-main-dark'}`}>
-                                  {doc.label}
+                                <h3 className={`font-semibold text-sm ${isSkipped ? 'text-text-sub-light dark:text-text-sub-dark line-through' : 'text-text-main-light dark:text-text-main-dark'}`}>
+                                  {bill.label}
                                 </h3>
-                                {doc.required && !isAttached && !isSkipped && (
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded">
-                                    Required
-                                  </span>
-                                )}
                                 {isSkipped && (
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                    Skipped
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                    N/A
                                   </span>
                                 )}
                               </div>
 
                               {isSkipped ? (
-                                <div className="mt-2">
-                                  <p className="text-sm text-text-sub-light dark:text-text-sub-dark">This document has been skipped.</p>
-                                  <div className="flex items-center gap-3 mt-2">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleUnskip(doc.key) }}
-                                      className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
-                                    >
-                                      <span className="material-symbols-outlined text-[14px]">undo</span>
-                                      Undo Skip
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); fileRefs[doc.key].current?.click() }}
-                                      className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
-                                    >
-                                      <span className="material-symbols-outlined text-[14px]">upload_file</span>
-                                      Attach Instead
-                                    </button>
-                                  </div>
+                                <div className="mt-1.5 flex items-center gap-3">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleUnskip(bill.key as keyof SkippedDocumentsMeta) }}
+                                    className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">undo</span>
+                                    Undo
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); fileRefs[bill.key]?.current?.click() }}
+                                    className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">upload_file</span>
+                                    Attach
+                                  </button>
                                 </div>
                               ) : !isAttached ? (
-                                <div className="mt-2">
-                                  <p className="text-sm text-text-sub-light dark:text-text-sub-dark">{doc.description}</p>
-                                  <div className="flex items-center justify-between mt-3">
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                                      <span className="material-symbols-outlined text-[14px]">cloud_upload</span>
-                                      Click to browse or drag & drop
+                                <div className="mt-1.5">
+                                  <p className="text-xs text-text-sub-light dark:text-text-sub-dark">{bill.description}</p>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                      <span className="material-symbols-outlined text-[13px]">cloud_upload</span>
+                                      Click or drag &amp; drop
                                     </p>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); handleSkip(doc.key) }}
-                                      className="text-sm font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-400 dark:hover:border-amber-600 transition-colors shadow-sm"
+                                      onClick={(e) => { e.stopPropagation(); handleSkip(bill.key as keyof SkippedDocumentsMeta) }}
+                                      className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 text-text-sub-light dark:text-text-sub-dark hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                                     >
-                                      <span className="material-symbols-outlined text-[16px]">skip_next</span>
-                                      Skip
+                                      <span className="material-symbols-outlined text-[14px]">block</span>
+                                      N/A
                                     </button>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="mt-2">
-                                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
-                                    <span className="material-symbols-outlined text-emerald-500 text-[18px]">insert_drive_file</span>
+                                <div className="mt-1.5">
+                                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-lg px-2.5 py-1.5 border border-emerald-200 dark:border-emerald-800">
+                                    <span className="material-symbols-outlined text-emerald-500 text-[16px]">insert_drive_file</span>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-text-main-light dark:text-text-main-dark truncate">
-                                        {attachments[doc.key]?.name}
+                                      <p className="text-xs font-medium text-text-main-light dark:text-text-main-dark truncate">
+                                        {attachments[bill.key]?.name}
                                       </p>
-                                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark">
-                                        {formatFileSize(attachments[doc.key]?.size || 0)}
+                                      <p className="text-[11px] text-text-sub-light dark:text-text-sub-dark">
+                                        {formatFileSize(attachments[bill.key]?.size || 0)}
                                       </p>
                                     </div>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); handleRemove(doc.key) }}
-                                      className="flex-shrink-0 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group"
-                                      title="Remove file"
+                                      onClick={(e) => { e.stopPropagation(); handleRemove(bill.key) }}
+                                      className="flex-shrink-0 p-0.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors group"
+                                      title="Remove"
                                     >
-                                      <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-red-500">close</span>
+                                      <span className="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-red-500">close</span>
                                     </button>
                                   </div>
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); fileRefs[doc.key].current?.click() }}
-                                    className="text-xs text-primary font-medium mt-2 hover:underline flex items-center gap-1"
+                                    onClick={(e) => { e.stopPropagation(); fileRefs[bill.key]?.current?.click() }}
+                                    className="text-[11px] text-primary font-medium mt-1.5 hover:underline flex items-center gap-1"
                                   >
-                                    <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
-                                    Replace file
+                                    <span className="material-symbols-outlined text-[13px]">swap_horiz</span>
+                                    Replace
                                   </button>
                                 </div>
                               )}
@@ -441,7 +450,7 @@ export default function AttachClient({ bookingId }: { bookingId: string }) {
               </Link>
               <button
                 onClick={handleContinueToSend}
-                disabled={completedCount === 0}
+                disabled={attachedCount === 0}
                 className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-blue-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg hover:shadow-primary/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
               >
                 <span>Continue to Send</span>

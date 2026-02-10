@@ -5,14 +5,19 @@ import Sidebar from '@/app/components/Sidebar'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { getBookingById, loadAttachments, clearAttachments, type Booking, type AttachedDocumentsMeta } from '../../data'
+import { getBookingById, loadAttachments, clearAttachments, type AttachedDocumentsMeta } from '../../data'
 
-const docLabels: Record<string, { label: string; icon: string }> = {
-  ledgerStatement: { label: 'Ledger Statement', icon: 'account_balance' },
-  arCoveringLetter: { label: 'AR Covering Letter', icon: 'description' },
-  eInvoice: { label: 'E-Invoice', icon: 'receipt' },
-  pmsInvoice: { label: 'PMS Invoice', icon: 'receipt_long' },
-  posSupporting: { label: 'POS Supporting', icon: 'article' },
+const billLabels: Record<string, { label: string; icon: string }> = {
+  roomCharges: { label: 'Room Charges', icon: 'hotel' },
+  foodBeverage: { label: 'Food & Restaurant', icon: 'restaurant' },
+  barLounge: { label: 'Bar & Lounge', icon: 'local_bar' },
+  roomService: { label: 'Room Service', icon: 'room_service' },
+  laundry: { label: 'Laundry & Dry Cleaning', icon: 'local_laundry_service' },
+  spaWellness: { label: 'Spa & Wellness', icon: 'spa' },
+  minibar: { label: 'Minibar', icon: 'kitchen' },
+  conferenceHall: { label: 'Conference & Banquet', icon: 'groups' },
+  parking: { label: 'Parking & Valet', icon: 'local_parking' },
+  miscellaneous: { label: 'Miscellaneous', icon: 'more_horiz' },
 }
 
 export default function SendClient({ bookingId }: { bookingId: string }) {
@@ -23,7 +28,6 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
   const [ccEmail, setCcEmail] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isSent, setIsSent] = useState(false)
-  const [activeTab, setActiveTab] = useState<'preview' | 'details'>('preview')
 
   useEffect(() => {
     const saved = loadAttachments(bookingId)
@@ -53,9 +57,18 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
 
   const attachmentKeys = attachments ? Object.keys(attachments) as (keyof AttachedDocumentsMeta)[] : []
   const attachmentCount = attachmentKeys.length
-  const paymentDays = 30
-  const mailSubject = `Payment Due of Rs.${booking.totalPrice.toLocaleString()}/- from ${paymentDays} days. Please pay`
-  const paymentLink = `https://corporate-portal.example.com/payments?booking=${booking.bookingNumber}`
+
+  const todayDate = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  const invoiceNumber = `INV-${booking.bookingNumber.replace('BK-', '')}-${new Date().getFullYear()}`
+  const invoiceDate = new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const checkInFormatted = new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const checkOutFormatted = new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const checkIn = new Date(booking.checkInDate)
+  const today = new Date()
+  const pendingDays = Math.max(0, Math.floor((today.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)))
+
+  const paymentLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/corporate-portal/login`
 
   const handleSend = async () => {
     if (!recipientEmail) {
@@ -63,7 +76,6 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
       return
     }
     setIsSending(true)
-    // Simulate sending
     await new Promise(resolve => setTimeout(resolve, 2500))
     setIsSending(false)
     setIsSent(true)
@@ -86,9 +98,9 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
               <div className="mx-auto w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6 animate-bounce">
                 <span className="material-symbols-outlined text-[40px] text-emerald-500">check_circle</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-text-main-light dark:text-text-main-dark">Email Sent Successfully!</h2>
+              <h2 className="text-2xl font-extrabold text-text-main-light dark:text-text-main-dark">Cover Letter Sent!</h2>
               <p className="text-text-sub-light dark:text-text-sub-dark mt-3 leading-relaxed">
-                Payment notification for <span className="font-semibold">{booking.bookingNumber}</span> has been sent to <span className="font-semibold text-primary">{recipientEmail}</span>
+                Invoice cover letter for <span className="font-semibold">{booking.bookingNumber}</span> has been sent to <span className="font-semibold text-primary">{recipientEmail}</span>
               </p>
               <div className="mt-4 p-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="flex justify-between text-sm">
@@ -97,11 +109,15 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                 </div>
                 <div className="flex justify-between text-sm mt-2">
                   <span className="text-text-sub-light dark:text-text-sub-dark">Amount</span>
-                  <span className="font-semibold">₹{booking.totalPrice.toLocaleString()}</span>
+                  <span className="font-semibold">&#8377;{booking.totalPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-2">
-                  <span className="text-text-sub-light dark:text-text-sub-dark">Attachments</span>
-                  <span className="font-semibold">{attachmentCount} document(s)</span>
+                  <span className="text-text-sub-light dark:text-text-sub-dark">Service Bills</span>
+                  <span className="font-semibold">{attachmentCount} attached</span>
+                </div>
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-text-sub-light dark:text-text-sub-dark">Payment Portal</span>
+                  <span className="font-semibold text-primary">Link included</span>
                 </div>
               </div>
               <button
@@ -139,7 +155,7 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                 {booking.bookingNumber}
               </Link>
               <span className="text-slate-300 dark:text-slate-600">/</span>
-              <span className="text-primary font-semibold">Send Email</span>
+              <span className="text-primary font-semibold">Send Cover Letter</span>
             </div>
 
             {/* Step Indicator */}
@@ -148,14 +164,14 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                 <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[18px] text-emerald-500">check</span>
                 </div>
-                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Documents Attached</span>
+                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Bills Attached</span>
               </div>
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[18px] text-white">mail</span>
                 </div>
-                <span className="text-sm font-semibold text-primary">Review & Send</span>
+                <span className="text-sm font-semibold text-primary">Review &amp; Send</span>
               </div>
             </div>
 
@@ -164,28 +180,6 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
 
               {/* Left Column - Email Settings */}
               <div className="lg:col-span-1 flex flex-col gap-4">
-                {/* Booking Quick Info */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider mb-3">Booking</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Booking #</p>
-                      <p className="font-semibold">{booking.bookingNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Organization</p>
-                      <p className="font-semibold">{booking.corporationName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Guest</p>
-                      <p className="font-semibold">{booking.customerName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Amount Due</p>
-                      <p className="text-xl font-extrabold text-primary">₹{booking.totalPrice.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Recipient */}
                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -214,11 +208,11 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                   </div>
                 </div>
 
-                {/* Attachments */}
+                {/* Attached Service Bills */}
                 <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider">
-                      Attachments
+                      Service Bills
                     </h3>
                     <span className="text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {attachmentCount}
@@ -227,14 +221,14 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                   {attachmentCount > 0 ? (
                     <div className="space-y-2">
                       {attachmentKeys.map((key) => {
-                        const doc = docLabels[key]
+                        const bill = billLabels[key] || { label: key, icon: 'description' }
                         const att = attachments![key]!
                         return (
                           <div key={key} className="flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                            <span className="material-symbols-outlined text-primary text-[18px]">{doc.icon}</span>
+                            <span className="material-symbols-outlined text-primary text-[18px]">{bill.icon}</span>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-semibold text-text-main-light dark:text-text-main-dark truncate">{att.name}</p>
-                              <p className="text-[11px] text-text-sub-light dark:text-text-sub-dark">{doc.label}</p>
+                              <p className="text-[11px] text-text-sub-light dark:text-text-sub-dark">{bill.label}</p>
                             </div>
                             <span className="material-symbols-outlined text-emerald-500 text-[16px]">check_circle</span>
                           </div>
@@ -244,205 +238,240 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                   ) : (
                     <div className="text-center py-4">
                       <span className="material-symbols-outlined text-[32px] text-slate-300 dark:text-slate-600">folder_off</span>
-                      <p className="text-sm text-text-sub-light dark:text-text-sub-dark mt-2">No documents attached</p>
+                      <p className="text-sm text-text-sub-light dark:text-text-sub-dark mt-2">No bills attached</p>
                       <Link href={`/hotel-finance/bookings/${bookingId}/attach`} className="text-xs text-primary font-semibold mt-2 inline-block hover:underline">
                         Go back to attach
                       </Link>
                     </div>
                   )}
                 </div>
+
+                {/* Booking Quick Info */}
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider mb-3">Booking</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-sub-light dark:text-text-sub-dark">Booking #</span>
+                      <span className="font-semibold">{booking.bookingNumber}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-sub-light dark:text-text-sub-dark">Organization</span>
+                      <span className="font-semibold">{booking.corporationName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-text-sub-light dark:text-text-sub-dark">Guest</span>
+                      <span className="font-semibold">{booking.customerName}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-text-sub-light dark:text-text-sub-dark">Amount Due</span>
+                      <span className="text-lg font-extrabold text-primary">&#8377;{booking.totalPrice.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Right Column - Email Preview */}
+              {/* Right Column - Cover Letter Preview */}
               <div className="lg:col-span-2">
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                  {/* Tab Header */}
-                  <div className="flex border-b border-slate-200 dark:border-slate-700">
-                    <button
-                      onClick={() => setActiveTab('preview')}
-                      className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === 'preview'
-                          ? 'border-b-2 border-primary text-primary bg-blue-50/50 dark:bg-blue-900/10'
-                          : 'text-text-sub-light dark:text-text-sub-dark hover:text-text-main-light'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">visibility</span>
-                      Email Preview
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('details')}
-                      className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === 'details'
-                          ? 'border-b-2 border-primary text-primary bg-blue-50/50 dark:bg-blue-900/10'
-                          : 'text-text-sub-light dark:text-text-sub-dark hover:text-text-main-light'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">info</span>
-                      Booking Details
-                    </button>
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+
+                  {/* Preview Header Bar */}
+                  <div className="flex items-center gap-2 px-5 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                    <span className="material-symbols-outlined text-[18px] text-primary">visibility</span>
+                    <span className="text-sm font-semibold text-text-main-light dark:text-text-main-dark">Cover Letter Preview</span>
                   </div>
 
-                  {activeTab === 'preview' && (
-                    <div className="p-6">
-                      {/* Email Header */}
-                      <div className="space-y-3 pb-4 border-b border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase w-16">From</span>
-                          <span className="text-sm text-text-main-light dark:text-text-main-dark">finance@hotelname.com</span>
+                  {/* Cover Letter Content */}
+                  <div className="p-6 md:p-8">
+
+                    {/* Hotel Letterhead */}
+                    <div className="flex items-start justify-between mb-6 pb-6 border-b-2 border-blue-600">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[28px] text-white">domain</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase w-16">To</span>
-                          <span className="text-sm text-text-main-light dark:text-text-main-dark">
-                            {recipientEmail || <span className="text-slate-400 italic">Enter recipient email →</span>}
-                          </span>
-                        </div>
-                        {ccEmail && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase w-16">CC</span>
-                            <span className="text-sm text-text-main-light dark:text-text-main-dark">{ccEmail}</span>
-                          </div>
-                        )}
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase w-16 mt-0.5">Subject</span>
-                          <span className="text-sm font-semibold text-primary">{mailSubject}</span>
+                        <div>
+                          <h2 className="text-lg font-extrabold text-blue-700 dark:text-blue-400">Grand Hotel &amp; Resorts</h2>
+                          <p className="text-[11px] text-text-sub-light dark:text-text-sub-dark">123 Hospitality Avenue, Mumbai 400001, Maharashtra, India</p>
+                          <p className="text-[11px] text-text-sub-light dark:text-text-sub-dark">Tel: +91 22 1234 5678 | Email: finance@grandhotel.com</p>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <p className="text-xs text-text-sub-light dark:text-text-sub-dark">GSTIN: 27AABCG1234F1ZH</p>
+                        <p className="text-xs text-text-sub-light dark:text-text-sub-dark">PAN: AABCG1234F</p>
+                      </div>
+                    </div>
 
-                      {/* Email Body */}
-                      <div className="mt-6 space-y-4 text-sm text-text-main-light dark:text-text-main-dark leading-relaxed">
-                        <p>Dear Sir/Madam,</p>
-                        <p>Greetings from our side.</p>
-                        <p>
-                          Please find below the Statement of Accounts for your reference, reflecting the transactions recorded in our books up to date. As per our records, an outstanding balance of{' '}
-                          <span className="font-bold text-primary">Rs.{booking.totalPrice.toLocaleString()}</span>{' '}
-                          is currently due for payment. We request you to kindly review the statement and arrange for payment at the earliest.
-                        </p>
-                        <p>
-                          <strong>Payment Link:</strong>{' '}
-                          <a href={paymentLink} className="text-primary hover:underline break-all">{paymentLink}</a>
-                        </p>
+                    {/* Date & Reference */}
+                    <div className="flex justify-between items-start mb-6">
+                      <div>
+                        <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Date</p>
+                        <p className="text-sm font-semibold text-text-main-light dark:text-text-main-dark">{todayDate}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Ref No.</p>
+                        <p className="text-sm font-semibold text-text-main-light dark:text-text-main-dark">{invoiceNumber}</p>
+                      </div>
+                    </div>
 
-                        {/* Booking Details Box */}
-                        <div className="bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 rounded-xl p-4 my-4">
-                          <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-3">Booking Details</p>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Booking #</span>
-                              <p className="font-semibold">{booking.bookingNumber}</p>
-                            </div>
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Organization</span>
-                              <p className="font-semibold">{booking.corporationName}</p>
-                            </div>
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Guest</span>
-                              <p className="font-semibold">{booking.customerName}</p>
-                            </div>
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Room</span>
-                              <p className="font-semibold">{booking.roomType}</p>
-                            </div>
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Check-in</span>
-                              <p className="font-semibold">{new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                            </div>
-                            <div>
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Check-out</span>
-                              <p className="font-semibold">{new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-blue-600/70 dark:text-blue-400/70">Amount Due</span>
-                              <p className="font-bold text-lg text-blue-700 dark:text-blue-300">Rs.{booking.totalPrice.toLocaleString()}</p>
-                            </div>
-                          </div>
-                        </div>
+                    {/* To Address */}
+                    <div className="mb-6">
+                      <p className="text-sm text-text-main-light dark:text-text-main-dark font-semibold">To,</p>
+                      <p className="text-sm text-text-main-light dark:text-text-main-dark font-bold">{booking.corporationName}</p>
+                      <p className="text-sm text-text-sub-light dark:text-text-sub-dark">
+                        {recipientEmail || <span className="italic text-slate-400">Enter recipient email &rarr;</span>}
+                      </p>
+                    </div>
 
-                        <p>
-                          In case of any discrepancy, kindly inform us within 48 hours, so that we can reconcile the same promptly. Your timely support in clearing the dues will be highly appreciated and will help us maintain smooth business operations.
-                        </p>
+                    {/* Subject */}
+                    <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/15 border-l-4 border-blue-600 rounded-r-lg">
+                      <p className="text-xs text-text-sub-light dark:text-text-sub-dark font-semibold uppercase tracking-wider mb-1">Subject</p>
+                      <p className="text-sm font-bold text-blue-700 dark:text-blue-400">
+                        Submission of Invoices with Statement of Accounts — {booking.bookingNumber}
+                      </p>
+                    </div>
 
-                        <div className="pt-2">
-                          <p>Best regards,</p>
-                          <p className="font-bold">Hotel Finance Team</p>
-                        </div>
+                    {/* Letter Body */}
+                    <div className="space-y-4 text-sm text-text-main-light dark:text-text-main-dark leading-relaxed">
+                      <p>Dear Sir / Madam,</p>
+
+                      <p>Greetings from Grand Hotel &amp; Resorts.</p>
+
+                      <p>
+                        Please find enclosed herewith the Statement of Accounts along with supporting service bills for your reference,
+                        reflecting the transactions recorded in our books as on date. As per our records, an outstanding balance of{' '}
+                        <span className="font-bold text-primary">Rs. {booking.totalPrice.toLocaleString()}/-</span>{' '}
+                        is currently due for payment. Kindly review the statement and arrange for payment at the earliest convenience.
+                      </p>
+
+                      {/* Invoice Table */}
+                      <div className="my-6 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-slate-800 dark:bg-slate-800 text-white text-xs uppercase tracking-wider">
+                              <th className="px-3 py-2.5 text-left font-semibold">Sr.</th>
+                              <th className="px-3 py-2.5 text-left font-semibold">Invoice No</th>
+                              <th className="px-3 py-2.5 text-left font-semibold">Inv Date</th>
+                              <th className="px-3 py-2.5 text-right font-semibold">Amount</th>
+                              <th className="px-3 py-2.5 text-left font-semibold">Guest Name</th>
+                              <th className="px-3 py-2.5 text-left font-semibold">Check In</th>
+                              <th className="px-3 py-2.5 text-left font-semibold">C/O Date</th>
+                              <th className="px-3 py-2.5 text-right font-semibold">Pending</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-slate-100 dark:border-slate-800">
+                              <td className="px-3 py-2.5 text-text-sub-light dark:text-text-sub-dark">1</td>
+                              <td className="px-3 py-2.5 font-medium">{invoiceNumber}</td>
+                              <td className="px-3 py-2.5 text-text-sub-light dark:text-text-sub-dark">{invoiceDate}</td>
+                              <td className="px-3 py-2.5 text-right font-semibold">&#8377;{booking.totalPrice.toLocaleString()}</td>
+                              <td className="px-3 py-2.5">{booking.customerName}</td>
+                              <td className="px-3 py-2.5 text-text-sub-light dark:text-text-sub-dark">{checkInFormatted}</td>
+                              <td className="px-3 py-2.5 text-text-sub-light dark:text-text-sub-dark">{checkOutFormatted}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-amber-600 dark:text-amber-400">{pendingDays} days</td>
+                            </tr>
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 font-bold">
+                              <td colSpan={3} className="px-3 py-2.5 text-right uppercase text-xs tracking-wider text-text-sub-light dark:text-text-sub-dark">Total Outstanding</td>
+                              <td className="px-3 py-2.5 text-right text-primary text-base">&#8377;{booking.totalPrice.toLocaleString()}</td>
+                              <td colSpan={4}></td>
+                            </tr>
+                          </tfoot>
+                        </table>
                       </div>
 
-                      {/* Attachments Bar */}
+                      {/* Attached Service Bills List */}
                       {attachmentCount > 0 && (
-                        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                          <p className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider mb-2 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">attach_file</span>
-                            {attachmentCount} Attachment(s)
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2">
+                            Enclosed Service Bills ({attachmentCount})
                           </p>
                           <div className="flex flex-wrap gap-2">
                             {attachmentKeys.map((key) => {
-                              const att = attachments![key]!
+                              const bill = billLabels[key] || { label: key, icon: 'description' }
                               return (
-                                <div key={key} className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
-                                  <span className="material-symbols-outlined text-[14px] text-primary">{docLabels[key].icon}</span>
-                                  <span className="text-xs font-medium text-text-main-light dark:text-text-main-dark truncate max-w-[150px]">{att.name}</span>
-                                </div>
+                                <span key={key} className="inline-flex items-center gap-1 text-xs bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 px-2.5 py-1 rounded-full text-emerald-700 dark:text-emerald-300 font-medium">
+                                  <span className="material-symbols-outlined text-[13px]">{bill.icon}</span>
+                                  {bill.label}
+                                </span>
                               )
                             })}
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {activeTab === 'details' && (
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider">Booking Information</h3>
-                          {[
-                            { label: 'Booking #', value: booking.bookingNumber },
-                            { label: 'Status', value: booking.status.replace('-', ' ').toUpperCase() },
-                            { label: 'Room Type', value: booking.roomType },
-                            { label: 'Nights', value: booking.nights.toString() },
-                          ].map(({ label, value }) => (
-                            <div key={label}>
-                              <p className="text-xs text-text-sub-light dark:text-text-sub-dark">{label}</p>
-                              <p className="font-semibold text-text-main-light dark:text-text-main-dark">{value}</p>
-                            </div>
-                          ))}
+                      <p>
+                        In case of any discrepancy, kindly inform us within 48 hours, so that we can reconcile the same promptly. Your timely support in clearing the dues will be highly appreciated and will help us maintain smooth business operations.
+                      </p>
+
+                      {/* Payment Portal Link */}
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/15 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-2">
+                          Online Payment Portal
+                        </p>
+                        <p className="text-sm text-text-main-light dark:text-text-main-dark mb-2">
+                          You can view and pay your invoices online by signing in to the corporate portal:
+                        </p>
+                        <a href={paymentLink} className="text-sm font-semibold text-primary hover:underline break-all flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                          {paymentLink}
+                        </a>
+                      </div>
+
+                      {/* Bank Details */}
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg">
+                        <p className="text-xs font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider mb-3">
+                          Bank Details for Wire Transfer
+                        </p>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">Account Name</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">Grand Hotel &amp; Resorts Pvt Ltd</p>
+                          </div>
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">Bank Name</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">HDFC Bank</p>
+                          </div>
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">Account No.</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">5020 0012 3456 789</p>
+                          </div>
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">IFSC Code</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">HDFC0001234</p>
+                          </div>
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">Branch</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">Fort, Mumbai</p>
+                          </div>
+                          <div>
+                            <span className="text-text-sub-light dark:text-text-sub-dark">SWIFT Code</span>
+                            <p className="font-semibold text-text-main-light dark:text-text-main-dark">HDFCINBB</p>
+                          </div>
                         </div>
-                        <div className="space-y-4">
-                          <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider">Guest & Company</h3>
-                          {[
-                            { label: 'Guest Name', value: booking.customerName },
-                            { label: 'Organization', value: booking.corporationName },
-                            { label: 'Check-in', value: new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                            { label: 'Check-out', value: new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                          ].map(({ label, value }) => (
-                            <div key={label}>
-                              <p className="text-xs text-text-sub-light dark:text-text-sub-dark">{label}</p>
-                              <p className="font-semibold text-text-main-light dark:text-text-main-dark">{value}</p>
+                      </div>
+
+                      {/* Signature & Stamp Area */}
+                      <div className="pt-4">
+                        <p>Thanking you,</p>
+                        <p className="mt-1">Yours faithfully,</p>
+                        <div className="mt-6 flex items-end justify-between">
+                          <div>
+                            <div className="w-40 h-16 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center">
+                              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Authorized Signatory</span>
                             </div>
-                          ))}
-                        </div>
-                        <div className="sm:col-span-2">
-                          <h3 className="text-sm font-bold text-text-sub-light dark:text-text-sub-dark uppercase tracking-wider mb-3">Billing Summary</h3>
-                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-text-sub-light dark:text-text-sub-dark">Room Charges ({booking.nights} nights × ₹{booking.pricePerNight.toLocaleString()})</span>
-                              <span className="font-semibold">₹{booking.totalPrice.toLocaleString()}</span>
-                            </div>
-                            {booking.gstApplicable && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-text-sub-light dark:text-text-sub-dark">GST (included)</span>
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Applicable</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-700">
-                              <span className="font-bold text-text-main-light dark:text-text-main-dark">Total Amount Due</span>
-                              <span className="font-extrabold text-primary text-lg">₹{booking.totalPrice.toLocaleString()}</span>
+                            <p className="text-sm font-bold mt-2">For Grand Hotel &amp; Resorts</p>
+                            <p className="text-xs text-text-sub-light dark:text-text-sub-dark">Finance Department</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="w-24 h-24 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg flex items-center justify-center">
+                              <span className="text-[10px] text-slate-400 uppercase tracking-wider text-center leading-tight">Company<br/>Stamp</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -469,7 +498,7 @@ export default function SendClient({ bookingId }: { bookingId: string }) {
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-[18px]">send</span>
-                    <span>Send Email</span>
+                    <span>Send Cover Letter</span>
                   </>
                 )}
               </button>

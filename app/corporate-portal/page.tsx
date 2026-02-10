@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import CorporatePortalClient from './CorporatePortalClient'
 
 export const metadata: Metadata = {
-  title: 'Corporate Client Dashboard'
+  title: 'Partner Hotels'
 }
 
 export default function CorporatePortalPage() {

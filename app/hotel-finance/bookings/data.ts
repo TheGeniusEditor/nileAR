@@ -20,19 +20,29 @@ export interface AttachmentMeta {
 }
 
 export interface AttachedDocumentsMeta {
-  ledgerStatement?: AttachmentMeta
-  arCoveringLetter?: AttachmentMeta
-  eInvoice?: AttachmentMeta
-  pmsInvoice?: AttachmentMeta
-  posSupporting?: AttachmentMeta
+  roomCharges?: AttachmentMeta
+  foodBeverage?: AttachmentMeta
+  barLounge?: AttachmentMeta
+  roomService?: AttachmentMeta
+  laundry?: AttachmentMeta
+  spaWellness?: AttachmentMeta
+  minibar?: AttachmentMeta
+  conferenceHall?: AttachmentMeta
+  parking?: AttachmentMeta
+  miscellaneous?: AttachmentMeta
 }
 
 export interface SkippedDocumentsMeta {
-  ledgerStatement?: boolean
-  arCoveringLetter?: boolean
-  eInvoice?: boolean
-  pmsInvoice?: boolean
-  posSupporting?: boolean
+  roomCharges?: boolean
+  foodBeverage?: boolean
+  barLounge?: boolean
+  roomService?: boolean
+  laundry?: boolean
+  spaWellness?: boolean
+  minibar?: boolean
+  conferenceHall?: boolean
+  parking?: boolean
+  miscellaneous?: boolean
 }
 
 export const mockBookings: Booking[] = [

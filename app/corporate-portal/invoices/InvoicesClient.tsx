@@ -12,6 +12,7 @@ interface Invoice {
   guestInitials: string
   guestInitialsBg: string
   guestInitialsColor: string
+  hotelName: string
   issued: string
   dueDate: string
   amount: number
@@ -26,6 +27,7 @@ const invoicesData: Invoice[] = [
     guestInitials: 'SJ',
     guestInitialsBg: 'bg-orange-100',
     guestInitialsColor: 'text-orange-600',
+    hotelName: 'Grand Hyatt Seattle',
     issued: 'Oct 12, 2023',
     dueDate: 'Oct 26, 2023',
     amount: 1250.00,
@@ -38,6 +40,7 @@ const invoicesData: Invoice[] = [
     guestInitials: 'MK',
     guestInitialsBg: 'bg-blue-100',
     guestInitialsColor: 'text-blue-600',
+    hotelName: 'Marriott Marquis SF',
     issued: 'Oct 28, 2023',
     dueDate: 'Nov 11, 2023',
     amount: 840.50,
@@ -50,6 +53,7 @@ const invoicesData: Invoice[] = [
     guestInitials: 'EW',
     guestInitialsBg: 'bg-purple-100',
     guestInitialsColor: 'text-purple-600',
+    hotelName: 'Hilton Garden Inn NYC',
     issued: 'Oct 05, 2023',
     dueDate: 'Oct 19, 2023',
     amount: 2100.00,
@@ -62,6 +66,7 @@ const invoicesData: Invoice[] = [
     guestInitials: 'JL',
     guestInitialsBg: 'bg-teal-100',
     guestInitialsColor: 'text-teal-600',
+    hotelName: 'W Hotel Austin',
     issued: 'Nov 01, 2023',
     dueDate: 'Nov 15, 2023',
     amount: 450.00,
@@ -74,6 +79,7 @@ const invoicesData: Invoice[] = [
     guestInitials: 'AR',
     guestInitialsBg: 'bg-pink-100',
     guestInitialsColor: 'text-pink-600',
+    hotelName: 'Radisson Blu Chicago',
     issued: 'Oct 08, 2023',
     dueDate: 'Oct 22, 2023',
     amount: 3200.00,
@@ -233,7 +239,7 @@ export default function InvoicesClient() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-gray-700">
-                      <th className="py-4 pl-6 pr-3 w-[40px]">
+                      <th className="py-3 pl-5 pr-2 w-[36px]">
                         <input
                           className="rounded border-slate-300 text-primary focus:ring-primary/20 dark:bg-slate-700 dark:border-gray-600 size-4 cursor-pointer"
                           type="checkbox"
@@ -241,19 +247,20 @@ export default function InvoicesClient() {
                           onChange={toggleSelectAll}
                         />
                       </th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Invoice #</th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Guest Name</th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Issued</th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Due Date</th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right">Amount</th>
-                      <th className="py-4 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-center">Status</th>
-                      <th className="py-4 pl-3 pr-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right">Actions</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Invoice #</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Guest</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Hotel</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Issued</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400">Due Date</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right">Amount</th>
+                      <th className="py-3 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-center">Status</th>
+                      <th className="py-3 pl-3 pr-5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-gray-400 text-right"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-gray-700">
                     {filteredInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                        <td className="py-4 pl-6 pr-3">
+                      <tr key={invoice.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => window.location.href = `/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`}>
+                        <td className="py-3 pl-5 pr-2" onClick={(e) => e.stopPropagation()}>
                           <input
                             className="rounded border-slate-300 text-primary focus:ring-primary/20 dark:bg-slate-700 dark:border-gray-600 size-4 cursor-pointer"
                             type="checkbox"
@@ -261,48 +268,37 @@ export default function InvoicesClient() {
                             onChange={() => toggleSelectInvoice(invoice.id)}
                           />
                         </td>
-                        <td className="py-4 px-3">
-                          <a className="font-bold text-primary hover:underline text-sm tabular-nums" href="#">
-                            {invoice.invoiceNumber}
-                          </a>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-primary text-sm tabular-nums whitespace-nowrap">{invoice.invoiceNumber}</span>
                         </td>
-                        <td className="py-4 px-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`size-8 rounded-full ${invoice.guestInitialsBg} ${invoice.guestInitialsColor} flex items-center justify-center font-bold text-xs`}>
-                              {invoice.guestInitials}
-                            </div>
-                            <span className="text-sm font-medium text-slate-900 dark:text-white">{invoice.guestName}</span>
-                          </div>
+                        <td className="py-3 px-3">
+                          <span className="text-sm font-medium text-slate-900 dark:text-white whitespace-nowrap">{invoice.guestName}</span>
                         </td>
-                        <td className="py-4 px-3 text-sm text-slate-600 dark:text-gray-400 tabular-nums">{invoice.issued}</td>
-                        <td className="py-4 px-3 text-sm font-medium text-slate-900 dark:text-gray-300 tabular-nums">
-                          {invoice.status === 'overdue' && <span className="text-red-600 dark:text-red-400">{invoice.dueDate}</span>}
-                          {invoice.status !== 'overdue' && invoice.dueDate}
+                        <td className="py-3 px-3">
+                          <span className="text-sm text-slate-600 dark:text-gray-300 whitespace-nowrap">{invoice.hotelName}</span>
                         </td>
-                        <td className="py-4 px-3 text-sm font-bold text-slate-900 dark:text-white text-right tabular-nums">
+                        <td className="py-3 px-3 text-sm text-slate-500 dark:text-gray-400 tabular-nums whitespace-nowrap">{invoice.issued}</td>
+                        <td className="py-3 px-3 text-sm tabular-nums whitespace-nowrap">
+                          {invoice.status === 'overdue' ? <span className="font-medium text-red-600 dark:text-red-400">{invoice.dueDate}</span> : <span className="text-slate-600 dark:text-gray-300">{invoice.dueDate}</span>}
+                        </td>
+                        <td className="py-3 px-3 text-sm font-bold text-slate-900 dark:text-white text-right tabular-nums whitespace-nowrap">
                           ${invoice.amount.toFixed(2)}
                         </td>
-                        <td className="py-4 px-3 text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getStatusBadge(invoice.status)}`}>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${getStatusBadge(invoice.status)}`}>
                             {getStatusLabel(invoice.status)}
                           </span>
                         </td>
-                        <td className="py-4 pl-3 pr-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link href={`/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`} className="p-1.5 text-slate-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="View Details">
-                              <span className="material-symbols-outlined text-[20px]">visibility</span>
+                        <td className="py-3 pl-3 pr-5 text-right" onClick={(e) => e.stopPropagation()}>
+                          {invoice.status !== 'paid' ? (
+                            <Link href={`/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`} className="px-3.5 py-1.5 bg-primary hover:bg-blue-600 text-white text-xs font-bold rounded-md shadow-sm shadow-primary/30 transition-colors inline-block">
+                              Pay Now
                             </Link>
-                            {invoice.status !== 'paid' && (
-                              <Link href={`/corporate-portal/invoices/${invoice.invoiceNumber.replace('#', '')}`} className="px-3 py-1.5 bg-primary hover:bg-blue-600 text-white text-xs font-bold rounded shadow-sm shadow-primary/30 transition-colors">
-                                Pay Now
-                              </Link>
-                            )}
-                            {invoice.status === 'paid' && (
-                              <span className="px-3 py-1.5 text-xs font-medium text-slate-400 dark:text-gray-600 select-none">
-                                Completed
-                              </span>
-                            )}
-                          </div>
+                          ) : (
+                            <button className="p-1.5 text-slate-400 hover:text-primary dark:text-gray-500 dark:hover:text-primary rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" title="Download">
+                              <span className="material-symbols-outlined text-[18px]">download</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
