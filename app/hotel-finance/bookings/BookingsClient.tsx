@@ -116,6 +116,17 @@ export default function BookingsClient() {
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState<Booking | null>(null)
   const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set())
+  const [showAddBookingModal, setShowAddBookingModal] = useState(false)
+  const [formData, setFormData] = useState({
+    bookingNumber: '',
+    customerName: '',
+    corporationName: '',
+    checkInDate: '',
+    checkOutDate: '',
+    roomType: '',
+    pricePerNight: '',
+    gstApplicable: false,
+  })
 
   const handleCheckout = (booking: Booking) => {
     setSelectedBookingForCheckout(booking)
@@ -138,6 +149,43 @@ export default function BookingsClient() {
     } else {
       setSelectedBookings(new Set(bookingsToSelect.map(b => b.id)))
     }
+  }
+
+  const handleAddBooking = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const checkIn = new Date(formData.checkInDate)
+    const checkOut = new Date(formData.checkOutDate)
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
+    const totalPrice = nights * parseFloat(formData.pricePerNight)
+
+    const newBooking: Booking = {
+      id: (bookings.length + 1).toString(),
+      bookingNumber: formData.bookingNumber,
+      customerName: formData.customerName,
+      corporationName: formData.corporationName,
+      checkInDate: formData.checkInDate,
+      checkOutDate: formData.checkOutDate,
+      roomType: formData.roomType,
+      nights,
+      pricePerNight: parseFloat(formData.pricePerNight),
+      totalPrice,
+      status: 'pending',
+      gstApplicable: formData.gstApplicable,
+    }
+
+    setBookings([...bookings, newBooking])
+    setShowAddBookingModal(false)
+    setFormData({
+      bookingNumber: '',
+      customerName: '',
+      corporationName: '',
+      checkInDate: '',
+      checkOutDate: '',
+      roomType: '',
+      pricePerNight: '',
+      gstApplicable: false,
+    })
   }
 
   const filteredBookings = bookings.filter(booking => {
@@ -178,6 +226,13 @@ export default function BookingsClient() {
                 <p className="text-text-sub-light dark:text-text-sub-dark mt-1">View and manage corporate hotel bookings</p>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAddBookingModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm hover:shadow-md hover:shadow-primary/30 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  <span>Add Booking</span>
+                </button>
                 <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-text-main-light dark:text-text-main-dark shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                   <span className="material-symbols-outlined text-[20px]">download</span>
                   <span>Export</span>
@@ -391,6 +446,159 @@ export default function BookingsClient() {
             setSelectedBookingForCheckout(null)
           }}
         />
+      )}
+
+      {/* Add Booking Modal */}
+      {showAddBookingModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700">
+            <div className="sticky top-0 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-text-main-light dark:text-text-main-dark">Add New Booking</h3>
+              <button
+                onClick={() => setShowAddBookingModal(false)}
+                className="text-text-sub-light dark:text-text-sub-dark hover:text-text-main-light dark:hover:text-text-main-dark transition-colors"
+              >
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBooking} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Booking Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.bookingNumber}
+                    onChange={(e) => setFormData({...formData, bookingNumber: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="e.g. BK-007"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Customer Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.customerName}
+                    onChange={(e) => setFormData({...formData, customerName: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="John Smith"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                  Corporation Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.corporationName}
+                  onChange={(e) => setFormData({...formData, corporationName: e.target.value})}
+                  className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  placeholder="Acme Corporation"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Check-in Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.checkInDate}
+                    onChange={(e) => setFormData({...formData, checkInDate: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Check-out Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.checkOutDate}
+                    onChange={(e) => setFormData({...formData, checkOutDate: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Room Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.roomType}
+                    onChange={(e) => setFormData({...formData, roomType: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  >
+                    <option value="">Select Room Type</option>
+                    <option value="Standard Room">Standard Room</option>
+                    <option value="Deluxe Suite">Deluxe Suite</option>
+                    <option value="Presidential Suite">Presidential Suite</option>
+                    <option value="Executive Room">Executive Room</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-text-main-light dark:text-text-main-dark mb-2">
+                    Price Per Night * ($)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.pricePerNight}
+                    onChange={(e) => setFormData({...formData, pricePerNight: e.target.value})}
+                    className="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="350"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="gstApplicable"
+                  checked={formData.gstApplicable}
+                  onChange={(e) => setFormData({...formData, gstApplicable: e.target.checked})}
+                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary cursor-pointer"
+                />
+                <label htmlFor="gstApplicable" className="text-sm font-semibold text-text-main-light dark:text-text-main-dark cursor-pointer">
+                  GST Applicable
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBookingModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold text-text-main-light dark:text-text-main-dark hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2.5 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm hover:shadow-md hover:shadow-primary/30 transition-all"
+                >
+                  Add Booking
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>
