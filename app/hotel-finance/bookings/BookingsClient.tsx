@@ -111,17 +111,53 @@ const mockBookings: Booking[] = [
 export default function BookingsClient() {
   const [bookings, setBookings] = useState<Booking[]>(mockBookings)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  const [fromDate, setFromDate] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
   const [showWorkflow, setShowWorkflow] = useState(false)
   const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState<Booking | null>(null)
+  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set())
 
   const handleCheckout = (booking: Booking) => {
     setSelectedBookingForCheckout(booking)
     setShowWorkflow(true)
   }
 
+  const toggleBookingSelection = (bookingId: string) => {
+    const newSelected = new Set(selectedBookings)
+    if (newSelected.has(bookingId)) {
+      newSelected.delete(bookingId)
+    } else {
+      newSelected.add(bookingId)
+    }
+    setSelectedBookings(newSelected)
+  }
+
+  const toggleSelectAll = (bookingsToSelect: Booking[]) => {
+    if (selectedBookings.size === bookingsToSelect.length && bookingsToSelect.length > 0) {
+      setSelectedBookings(new Set())
+    } else {
+      setSelectedBookings(new Set(bookingsToSelect.map(b => b.id)))
+    }
+  }
+
   const filteredBookings = bookings.filter(booking => {
-    if (selectedFilter === 'all') return true
-    return booking.status === selectedFilter
+    // Status filter
+    if (selectedFilter !== 'all' && booking.status !== selectedFilter) return false
+    
+    // Date range filter
+    if (fromDate) {
+      const bookingDate = new Date(booking.checkInDate)
+      const filterDate = new Date(fromDate)
+      if (bookingDate < filterDate) return false
+    }
+    
+    if (toDate) {
+      const bookingDate = new Date(booking.checkOutDate)
+      const filterDate = new Date(toDate)
+      if (bookingDate > filterDate) return false
+    }
+    
+    return true
   })
 
   return (
@@ -150,23 +186,64 @@ export default function BookingsClient() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700">
-              {['all', 'pending', 'confirmed', 'checked-in', 'checked-out'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`px-4 py-3 border-b-2 font-semibold text-sm transition-colors ${
-                    selectedFilter === filter
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-text-main-light dark:hover:text-text-main-dark'
-                  }`}
-                >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1).replace('-', ' ')}
-                  <span className="ml-2 text-xs font-normal opacity-75">
-                    ({bookings.filter(b => filter === 'all' ? true : b.status === filter).length})
-                  </span>
-                </button>
-              ))}
+            <div className="flex flex-col gap-4">
+              {/* Date Range Filter */}
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end bg-surface-light dark:bg-surface-dark rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+                <div className="flex-1 sm:flex-none">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                    From Date
+                  </label>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div className="flex-1 sm:flex-none">
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                    To Date
+                  </label>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-text-main-light dark:text-text-main-dark focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                {(fromDate || toDate) && (
+                  <button
+                    onClick={() => {
+                      setFromDate('')
+                      setToDate('')
+                    }}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-primary transition-colors flex-shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">clear</span>
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700">
+                {['all', 'pending', 'confirmed', 'checked-in', 'checked-out'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setSelectedFilter(filter)}
+                    className={`px-4 py-3 border-b-2 font-semibold text-sm transition-colors ${
+                      selectedFilter === filter
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-text-main-light dark:hover:text-text-main-dark'
+                    }`}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1).replace('-', ' ')}
+                    <span className="ml-2 text-xs font-normal opacity-75">
+                      ({bookings.filter(b => filter === 'all' ? true : b.status === filter).length})
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Bookings Table */}
@@ -175,6 +252,14 @@ export default function BookingsClient() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                      <th className="px-6 py-4 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedBookings.size === filteredBookings.length && filteredBookings.length > 0}
+                          onChange={() => toggleSelectAll(filteredBookings)}
+                          className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Booking #</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Customer</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-text-main-light dark:text-text-main-dark">Corporation</th>
@@ -186,7 +271,15 @@ export default function BookingsClient() {
                   <tbody>
                     {filteredBookings.length > 0 ? (
                       filteredBookings.map((booking) => (
-                        <tr key={booking.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                        <tr key={booking.id} className={`border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${selectedBookings.has(booking.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                          <td className="px-6 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedBookings.has(booking.id)}
+                              onChange={() => toggleBookingSelection(booking.id)}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary cursor-pointer"
+                            />
+                          </td>
                           <td className="px-6 py-4 text-sm font-semibold text-text-main-light dark:text-text-main-dark">
                             {booking.bookingNumber}
                           </td>
@@ -208,8 +301,8 @@ export default function BookingsClient() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-2 flex-wrap">
-                              <Link 
-                                href={`/hotel-finance/bookings/${booking.id}/attach`}
+                              <Link
+                                href={`/hotel-finance/bookings/${booking.id}/bills`}
                                 className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-semibold transition-all duration-200"
                               >
                                 <span className="material-symbols-outlined text-[18px]">attach_file</span>
@@ -228,7 +321,7 @@ export default function BookingsClient() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-text-sub-light dark:text-text-sub-dark">
+                        <td colSpan={7} className="px-6 py-8 text-center text-text-sub-light dark:text-text-sub-dark">
                           <div className="flex flex-col items-center gap-2">
                             <span className="material-symbols-outlined text-[48px] opacity-40">inbox</span>
                             <p className="text-sm font-medium">No bookings found</p>
