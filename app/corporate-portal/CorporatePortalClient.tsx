@@ -258,9 +258,10 @@ export default function CorporatePortalClient() {
               {filteredHotels.map((hotel) => {
                 const badge = getStatusBadge(hotel.status)
                 return (
-                  <div
+                  <Link
                     key={hotel.id}
-                    className="flex flex-col bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group hover:shadow-lg hover:border-primary/30 transition-all duration-300"
+                    href={`/corporate-portal/hotels/${hotel.id}`}
+                    className="flex flex-col bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group hover:shadow-lg hover:border-primary/30 transition-all duration-300 cursor-pointer"
                   >
                     {/* Hotel Image */}
                     <div className="relative h-40 overflow-hidden">
@@ -316,16 +317,13 @@ export default function CorporatePortalClient() {
                         <span>Last stay: {hotel.lastStayDate}</span>
                       </div>
 
-                      {/* Action Button */}
-                      <Link
-                        href={`/corporate-portal/hotels/${hotel.id}`}
-                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white font-semibold text-sm transition-all duration-300"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-                        View Reconciliation
-                      </Link>
+                      {/* Click indicator */}
+                      <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white font-semibold text-sm transition-all duration-300">
+                        <span>View Details</span>
+                        <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>

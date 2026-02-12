@@ -142,6 +142,18 @@ export default function ReconciliationClient({ organizationId }: { organizationI
   const filteredItems = filterStatus === 'all' ? items : items.filter(item => item.status === filterStatus)
   const filteredInvoices = filterStatus === 'all' ? invoices : invoices.filter(item => item.status === filterStatus)
 
+  // Group invoices with their matching payments
+  const invoiceWithPayments = filteredInvoices.map(invoice => {
+    const relatedPayments = payments.filter(payment => 
+      payment.matchedWith === invoice.invoiceNumber || 
+      invoice.matchedWith === payment.paymentReference
+    )
+    return {
+      invoice,
+      payments: relatedPayments
+    }
+  })
+
   const handleResolveDiscrepancy = (discrepancy: Discrepancy) => {
     setSelectedDiscrepancy(discrepancy)
     setShowResolveModal(true)
@@ -352,79 +364,124 @@ export default function ReconciliationClient({ organizationId }: { organizationI
               ))}
             </div>
 
-            {/* Invoices Section */}
+            {/* Invoices and Payments Unified Section */}
             <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
                 <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-xl">receipt</span>
-                  Invoices ({filteredInvoices.length})
+                  <span className="material-symbols-outlined text-xl">receipt_long</span>
+                  Invoices & Payments Reconciliation ({filteredInvoices.length})
                 </h3>
               </div>
               
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1200px]">
+                <table className="w-full min-w-[1400px]">
                   <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Invoice #</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Due Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Description</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Amount</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400" colSpan={5}>Invoice Details</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400" colSpan={3}>Payment Details</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Matched With</th>
+                    </tr>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Invoice #</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Due Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Description</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Payment Ref</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Payment Date</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Amount Paid</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Match Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {filteredInvoices.map((item) => (
-                      <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">{item.invoiceNumber}</span>
+                    {invoiceWithPayments.map(({ invoice, payments: relatedPayments }) => (
+                      <tr key={invoice.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        {/* Invoice Details */}
+                        <td className="px-6 py-4 align-top">
+                          <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">{invoice.invoiceNumber}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{item.date}</span>
+                        <td className="px-6 py-4 align-top">
+                          <span className="text-sm text-slate-600 dark:text-slate-300">{invoice.date}</span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 align-top">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-slate-600 dark:text-slate-300">{item.dueDate}</span>
-                            {item.daysOverdue && item.daysOverdue > 0 && (
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{invoice.dueDate}</span>
+                            {invoice.daysOverdue && invoice.daysOverdue > 0 && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">
                                 <span className="material-symbols-outlined text-[12px]">schedule</span>
-                                {item.daysOverdue}d
+                                {invoice.daysOverdue}d
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{item.description}</span>
+                        <td className="px-6 py-4 align-top">
+                          <span className="text-sm text-slate-600 dark:text-slate-300">{invoice.description}</span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white">₹{item.amount.toLocaleString()}</span>
+                        <td className="px-6 py-4 text-right align-top">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white">₹{invoice.amount.toLocaleString()}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          {item.status === 'matched' && (
+
+                        {/* Payment Details */}
+                        {relatedPayments.length > 0 ? (
+                          <>
+                            <td className="px-6 py-4 align-top">
+                              <div className="space-y-1">
+                                {relatedPayments.map(payment => (
+                                  <div key={payment.id} className="flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[16px]">check_circle</span>
+                                    <span className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-400">{payment.paymentReference}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 align-top">
+                              <div className="space-y-1">
+                                {relatedPayments.map(payment => (
+                                  <span key={payment.id} className="block text-sm text-emerald-700 dark:text-emerald-400">{payment.date}</span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right align-top">
+                              <div className="space-y-1">
+                                {relatedPayments.map(payment => (
+                                  <span key={payment.id} className="block text-sm font-semibold text-emerald-700 dark:text-emerald-400">₹{payment.amount.toLocaleString()}</span>
+                                ))}
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 align-top">
+                              <span className="text-xs text-slate-400 dark:text-slate-500">No payment</span>
+                            </td>
+                            <td className="px-6 py-4 align-top">
+                              <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
+                            </td>
+                            <td className="px-6 py-4 text-right align-top">
+                              <span className="text-xs text-slate-400 dark:text-slate-500">₹0</span>
+                            </td>
+                          </>
+                        )}
+
+                        {/* Status */}
+                        <td className="px-6 py-4 align-top">
+                          {invoice.status === 'matched' && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
                               <span className="material-symbols-outlined text-[14px]">check</span>
                               Matched
                             </span>
                           )}
-                          {item.status === 'unmatched' && (
+                          {invoice.status === 'unmatched' && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-400">
                               <span className="material-symbols-outlined text-[14px]">close</span>
                               Unmatched
                             </span>
                           )}
-                          {item.status === 'partial' && (
+                          {invoice.status === 'partial' && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                               <span className="material-symbols-outlined text-[14px]">schedule</span>
                               Partial
                             </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.matchedWith ? (
-                            <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{item.matchedWith}</span>
-                          ) : (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
                           )}
                         </td>
                       </tr>
@@ -436,78 +493,7 @@ export default function ReconciliationClient({ organizationId }: { organizationI
               {filteredInvoices.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 px-6">
                   <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 mb-3">inbox</span>
-                  <p className="text-slate-600 dark:text-slate-400">No invoices found for selected filter</p>
-                </div>
-              )}
-            </div>
-
-            {/* Payments Section */}
-            <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
-                <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-xl">check_circle</span>
-                  Payments ({payments.length})
-                </h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1200px]">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Reference</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Payment Date</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Description</th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Amount</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Matched With</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {payments.map((item) => (
-                      <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-sm font-semibold text-slate-900 dark:text-white">{item.paymentReference}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{item.date}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{item.description}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white">₹{item.amount.toLocaleString()}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.status === 'matched' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                              <span className="material-symbols-outlined text-[14px]">check</span>
-                              Matched
-                            </span>
-                          )}
-                          {item.status === 'partial' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                              <span className="material-symbols-outlined text-[14px]">schedule</span>
-                              Partial
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.matchedWith ? (
-                            <span className="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{item.matchedWith}</span>
-                          ) : (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {payments.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 px-6">
-                  <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 mb-3">inbox</span>
-                  <p className="text-slate-600 dark:text-slate-400">No payments found</p>
+                  <p className="text-slate-600 dark:text-slate-400">No items found for selected filter</p>
                 </div>
               )}
             </div>

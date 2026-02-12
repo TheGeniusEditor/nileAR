@@ -17,7 +17,9 @@ const organizationsData = [
     gst: '27AAAAA0000A1Z5',
     creditPeriod: '30 Days',
     paymentTerms: 'Net 30',
-    status: 'active'
+    status: 'active',
+    amountReceived: 245000,
+    pendingPayment: 55000
   },
   {
     id: 'ORG-024',
@@ -30,7 +32,9 @@ const organizationsData = [
     gst: '07BBBBB1111B2Y6',
     creditPeriod: '45 Days',
     paymentTerms: 'Net 45',
-    status: 'active'
+    status: 'active',
+    amountReceived: 180000,
+    pendingPayment: 20000
   },
   {
     id: 'ORG-052',
@@ -43,7 +47,9 @@ const organizationsData = [
     gst: '33CCCCC2222C3X7',
     creditPeriod: '15 Days',
     paymentTerms: 'Immediate',
-    status: 'on-hold'
+    status: 'on-hold',
+    amountReceived: 95000,
+    pendingPayment: 65000
   },
   {
     id: 'ORG-089',
@@ -56,7 +62,9 @@ const organizationsData = [
     gst: '19DDDDD3333D4W8',
     creditPeriod: '60 Days',
     paymentTerms: 'Net 60',
-    status: 'active'
+    status: 'active',
+    amountReceived: 320000,
+    pendingPayment: 0
   },
   {
     id: 'ORG-102',
@@ -69,7 +77,9 @@ const organizationsData = [
     gst: '22EEEEE4444E5V9',
     creditPeriod: '30 Days',
     paymentTerms: 'Net 30',
-    status: 'active'
+    status: 'active',
+    amountReceived: 152000,
+    pendingPayment: 28000
   }
 ]
 
@@ -150,65 +160,83 @@ export default function OrganizationsClient() {
             {/* Data Table */}
             <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1000px]">
+                <table className="w-full min-w-[1200px]">
                   <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
                     <tr>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Organization Name</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">GST Number</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Credit Period</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Terms</th>
+                      <th className="whitespace-nowrap px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Amount Received</th>
+                      <th className="whitespace-nowrap px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pending Payment</th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
-                      <th className="whitespace-nowrap px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Reconciliation</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {filteredOrganizations.map((org) => (
-                      <tr key={org.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr key={org.id} className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="flex items-center gap-3">
                             <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${org.bgColor} ${org.iconColor} ${org.darkBgColor} ${org.darkIconColor}`}>
                               <span className="material-symbols-outlined">{org.icon}</span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-slate-900 dark:text-white">{org.name}</span>
+                              <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{org.name}</span>
                               <span className="text-xs text-slate-500 dark:text-slate-400">ID: {org.id}</span>
                             </div>
-                          </div>
+                          </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="font-mono text-sm text-slate-600 dark:text-slate-300">{org.gst}</span>
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            <span className="font-mono text-sm text-slate-600 dark:text-slate-300">{org.gst}</span>
+                          </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{org.creditPeriod}</span>
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{org.creditPeriod}</span>
+                          </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">{org.paymentTerms}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {org.status === 'active' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                              <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                              Active
-                            </span>
-                          )}
-                          {org.status === 'on-hold' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                              <span className="material-symbols-outlined text-[14px]">pause_circle</span>
-                              On Hold
-                            </span>
-                          )}
-                          {org.status === 'inactive' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-400">
-                              <span className="material-symbols-outlined text-[14px]">cancel</span>
-                              Inactive
-                            </span>
-                          )}
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{org.paymentTerms}</span>
+                          </Link>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <Link href={`/hotel-finance/organizations/${org.id}`}>
-                            <button className="flex h-10 items-center justify-center rounded-lg bg-primary px-6 text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-blue-600 focus:ring-4 focus:ring-blue-500/30">
-                              <span className="text-sm font-bold leading-normal">Reconcile</span>
-                            </button>
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-[18px]">check_circle</span>
+                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">₹{org.amountReceived.toLocaleString()}</span>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-[18px]">schedule</span>
+                              <span className={`text-sm font-semibold ${org.pendingPayment > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>₹{org.pendingPayment.toLocaleString()}</span>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Link href={`/hotel-finance/organizations/${org.id}`} className="block">
+                            {org.status === 'active' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                Active
+                              </span>
+                            )}
+                            {org.status === 'on-hold' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                <span className="material-symbols-outlined text-[14px]">pause_circle</span>
+                                On Hold
+                              </span>
+                            )}
+                            {org.status === 'inactive' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-400">
+                                <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                Inactive
+                              </span>
+                            )}
                           </Link>
                         </td>
                       </tr>
