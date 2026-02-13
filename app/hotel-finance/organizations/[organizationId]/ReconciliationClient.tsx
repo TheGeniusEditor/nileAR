@@ -213,6 +213,12 @@ export default function ReconciliationClient({ organizationId }: { organizationI
                 </div>
 
                 <div className="flex flex-col gap-3">
+                  <Link href={`/hotel-finance/organizations/${organizationId}/contract`}>
+                    <button className="flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-white shadow-sm transition-all hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/30">
+                      <span className="material-symbols-outlined mr-2 text-[20px]">description</span>
+                      <span className="text-sm font-bold leading-normal">View Contract</span>
+                    </button>
+                  </Link>
                   <Link href="/hotel-finance/organizations">
                     <button className="flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-slate-900 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">
                       <span className="material-symbols-outlined mr-2 text-[20px]">arrow_back</span>
