@@ -5,7 +5,6 @@ import Sidebar from '@/app/components/Sidebar'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import ContractGenerationModal from './ContractGenerationModal'
 
 const organizationsData = [
   {
@@ -89,8 +88,6 @@ export default function OrganizationsClient() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [showContractModal, setShowContractModal] = useState(false)
-  const [selectedOrganization, setSelectedOrganization] = useState<any>(null)
 
   const filteredOrganizations = organizationsData.filter(org => {
     const matchesSearch = org.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -98,32 +95,6 @@ export default function OrganizationsClient() {
     const matchesStatus = !statusFilter || org.status === statusFilter
     return matchesSearch && matchesStatus
   })
-
-  const handleGenerateContract = (org: any) => {
-    setSelectedOrganization({
-      id: org.id,
-      name: org.name,
-      contactPerson: 'John Doe', // In production, this would come from org data
-      email: 'contact@company.com',
-      mobile: '9876543210',
-      gstNumber: org.gst,
-      panCard: org.gst.substring(2, 12),
-      companyAddress: '123 Business Street, City, State, PIN',
-      billingAddress: '123 Business Street, City, State, PIN'
-    })
-    setShowContractModal(true)
-  }
-
-  const handleContractGenerated = (contractData: any) => {
-    console.log('Contract generated:', contractData)
-    
-    // Close modal and redirect to contract page
-    setShowContractModal(false)
-    setSelectedOrganization(null)
-    
-    // Navigate to the contract page for this organization
-    router.push(`/hotel-finance/organizations/${selectedOrganization.id}/contract`)
-  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark">
@@ -232,24 +203,21 @@ export default function OrganizationsClient() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                handleGenerateContract(org)
-                              }}
+                            <Link
+                              href={`/hotel-finance/organizations/${org.id}/contract`}
                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
                               title="Generate Contract"
                             >
                               <span className="material-symbols-outlined text-[18px]">description</span>
                               <span>Generate Contract</span>
-                            </button>
+                            </Link>
                             <Link
                               href={`/hotel-finance/organizations/${org.id}`}
                               className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors text-sm font-medium"
                               title="Manage Contact"
                             >
                               <span className="material-symbols-outlined text-[18px]">person</span>
-                              <span>Manage Contact</span>
+                              <span>Manage Organisation</span>
                             </Link>
                           </div>
                         </td>
@@ -270,19 +238,6 @@ export default function OrganizationsClient() {
                     <button className="flex size-9 items-center justify-center rounded-lg bg-primary text-sm font-medium text-white shadow-sm">1</button>
                     <button className="flex size-9 items-center justify-center rounded-lg bg-transparent text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">2</button>
                     <button className="flex size-9 items-center justify-center rounded-lg bg-transparent text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">3</button>
-
-      {/* Contract Generation Modal */}
-      {selectedOrganization && (
-        <ContractGenerationModal
-          isOpen={showContractModal}
-          onClose={() => {
-            setShowContractModal(false)
-            setSelectedOrganization(null)
-          }}
-          organizationData={selectedOrganization}
-          onGenerate={handleContractGenerated}
-        />
-      )}
                     <span className="flex size-9 items-center justify-center text-sm text-slate-400">...</span>
                     <button className="flex size-9 items-center justify-center rounded-lg bg-transparent text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">10</button>
                   </div>
