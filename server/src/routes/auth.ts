@@ -61,16 +61,17 @@ const refreshCookieOptions = {
   maxAge: parseTtlMs(config.refreshTokenTtl)
 };
 
-const createAccessToken = (userId: string, role: string) => {
-  return jwt.sign(
+const createAccessToken = (userId: string, role: string): string => {
+  const token = jwt.sign(
     { sub: userId, role, scope: "hotel-finance" },
     config.jwtAccessSecret,
     {
       expiresIn: config.accessTokenTtl,
       issuer: "hotel-finance-api",
       audience: "hotel-finance-web"
-    }
+    } as any
   );
+  return token;
 };
 
 const createRefreshToken = async (userId: string, userAgent?: string, ipAddress?: string) => {
