@@ -37,6 +37,11 @@ const loginSchema = z.object({
   password: z.string().min(1).max(128)
 });
 
+const corporateLoginSchema = z.object({
+  userId: z.string().min(4).max(60),
+  password: z.string().min(1).max(128)
+});
+
 const parseTtlMs = (ttl: string) => {
   const match = ttl.match(/^(\d+)([smhd])$/);
   if (!match) {
@@ -71,6 +76,25 @@ const createAccessToken = (userId: string, role: string): string => {
       audience: "hotel-finance-web"
     } as any
   );
+  return token;
+};
+
+const createCorporateAccessToken = (organizationId: string, corporateUserId: string): string => {
+  const token = jwt.sign(
+    {
+      sub: organizationId,
+      role: "corporate_portal_user",
+      scope: "corporate-portal",
+      corporateUserId
+    },
+    config.jwtAccessSecret,
+    {
+      expiresIn: config.accessTokenTtl,
+      issuer: "hotel-finance-api",
+      audience: "corporate-portal-web"
+    } as any
+  );
+
   return token;
 };
 
@@ -254,6 +278,51 @@ router.post("/logout", async (req, res, next) => {
 
     res.clearCookie("refresh_token", refreshCookieOptions);
     return res.status(200).json({ ok: true });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/corporate/login", authLimiter, async (req, res, next) => {
+  try {
+    const { userId, password } = corporateLoginSchema.parse(req.body);
+    const normalizedUserId = userId.trim().toUpperCase();
+
+    const result = await query(
+      `SELECT id, name, corporate_user_id, corporate_password_hash, is_active
+       FROM organizations
+       WHERE corporate_user_id = $1`,
+      [normalizedUserId]
+    );
+
+    if (result.rowCount === 0) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return res.status(401).json({ error: { message: "Invalid credentials" } });
+    }
+
+    const organization = result.rows[0];
+
+    if (!organization.is_active) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return res.status(403).json({ error: { message: "Organization account disabled" } });
+    }
+
+    const passwordOk = await bcrypt.compare(password, organization.corporate_password_hash);
+    if (!passwordOk) {
+      return res.status(401).json({ error: { message: "Invalid credentials" } });
+    }
+
+    const accessToken = createCorporateAccessToken(organization.id, organization.corporate_user_id);
+
+    return res.status(200).json({
+      user: {
+        id: organization.id,
+        userId: organization.corporate_user_id,
+        name: organization.name,
+        role: "corporate_portal_user"
+      },
+      accessToken
+    });
   } catch (error) {
     return next(error);
   }

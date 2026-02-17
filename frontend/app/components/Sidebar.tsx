@@ -1,8 +1,10 @@
 "use client"
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { logout } from '@/lib/auth'
+import { logoutCorporate } from '@/lib/corporateAuth'
 
 export interface SidebarProps {
   title: string
@@ -13,6 +15,7 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTooltip, setShowTooltip] = useState<string | null>(null)
   const pathname = usePathname()
+  const router = useRouter()
   
   // Determine which portal we're in
   const isHotelFinance = pathname.includes('/hotel-finance')
@@ -36,6 +39,22 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
   const isEmployeeStaysActive = pathname === employeeStaysHref
   const isReportsActive = pathname === reportsHref
   const isSettingsActive = pathname === settingsHref
+
+  const handleLogout = async () => {
+    if (isCorporatePortal) {
+      await logoutCorporate()
+      router.push('/corporate-portal/login')
+      return
+    }
+
+    if (isHotelFinance) {
+      await logout()
+      router.push('/hotel-finance/login')
+      return
+    }
+
+    router.push('/')
+  }
 
   return (
     <aside className={`${isCollapsed ? 'w-20' : 'w-64'} flex-shrink-0 border-r border-[#e7ecf3] dark:border-slate-800 bg-white dark:bg-[#161f2c] hidden lg:flex flex-col transition-all duration-500 ease-in-out shadow-lg`}>
@@ -257,10 +276,14 @@ export default function Sidebar({ title, logoIcon }: SidebarProps) {
           onMouseEnter={() => isCollapsed && setShowTooltip('logout')}
           onMouseLeave={() => setShowTooltip(null)}
         >
-          <Link className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 group/link ${isCollapsed ? 'justify-center' : ''}`} href="/">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-300 group/link ${isCollapsed ? 'justify-center' : ''}`}
+          >
             <span className={`material-symbols-outlined text-[22px] transition-all duration-300 group-hover/link:-translate-x-1 ${isCollapsed ? 'group-hover/link:scale-125 group-hover/link:translate-x-0' : ''}`}>logout</span>
             <p className={`text-sm font-medium transition-all duration-500 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-75'}`}>Log Out</p>
-          </Link>
+          </button>
           {isCollapsed && showTooltip === 'logout' && (
             <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-red-600 text-white text-xs rounded-lg whitespace-nowrap z-50 shadow-lg animate-in fade-in slide-in-from-left-1 duration-200">
               Log Out

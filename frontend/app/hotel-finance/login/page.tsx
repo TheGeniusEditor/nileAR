@@ -32,6 +32,15 @@ export default function HotelFinanceLoginPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/40 to-white text-slate-900 flex items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-7 shadow-xl">
+        <div className="mb-4">
+          <Link
+            className="inline-flex items-center gap-1 text-sm font-semibold text-slate-600 hover:text-amber-700"
+            href="/"
+          >
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+            <span>Back to Landing Page</span>
+          </Link>
+        </div>
         <h1 className="text-lg font-semibold text-slate-900">Hotel Finance Login</h1>
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1.5">

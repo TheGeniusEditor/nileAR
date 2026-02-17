@@ -1,9 +1,11 @@
 "use client"
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Sidebar from '@/app/components/Sidebar'
 import Header from '@/app/components/Header'
+import { corporateTokenStorage } from '@/lib/corporateAuth'
 
 interface Hotel {
   id: string
@@ -133,8 +135,24 @@ const getStatusBadge = (status: Hotel['status']) => {
 }
 
 export default function CorporatePortalClient() {
+  const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'on-hold' | 'settled'>('all')
+
+  useEffect(() => {
+    const token = corporateTokenStorage.get()
+    if (!token) {
+      router.replace('/corporate-portal/login')
+      return
+    }
+
+    setIsAuthorized(true)
+  }, [router])
+
+  if (!isAuthorized) {
+    return null
+  }
 
   const filteredHotels = mockHotels.filter(hotel => {
     const matchesSearch = hotel.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

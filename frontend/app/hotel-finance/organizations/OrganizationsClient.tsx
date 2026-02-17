@@ -2,11 +2,80 @@
 
 import Header from '@/app/components/Header'
 import Sidebar from '@/app/components/Sidebar'
-import { useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
-const organizationsData = [
+type OrganizationStatus = 'active' | 'on-hold' | 'inactive'
+
+interface Organization {
+  id: string
+  name: string
+  icon: string
+  bgColor: string
+  iconColor: string
+  darkBgColor: string
+  darkIconColor: string
+  gst: string
+  creditPeriod: string
+  paymentTerms: string
+  status: OrganizationStatus
+  amountReceived: number
+  pendingPayment: number
+}
+
+interface ApiOrganization {
+  id: string
+  name: string
+  gst: string | null
+  creditPeriod: string | null
+  paymentTerms: string | null
+  status: OrganizationStatus
+}
+
+const apiBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  'http://localhost:4000'
+
+const iconThemes = [
+  {
+    icon: 'apartment',
+    bgColor: 'bg-blue-100',
+    iconColor: 'text-blue-700',
+    darkBgColor: 'dark:bg-blue-900/30',
+    darkIconColor: 'dark:text-blue-300'
+  },
+  {
+    icon: 'business',
+    bgColor: 'bg-indigo-100',
+    iconColor: 'text-indigo-700',
+    darkBgColor: 'dark:bg-indigo-900/30',
+    darkIconColor: 'dark:text-indigo-300'
+  },
+  {
+    icon: 'local_shipping',
+    bgColor: 'bg-purple-100',
+    iconColor: 'text-purple-700',
+    darkBgColor: 'dark:bg-purple-900/30',
+    darkIconColor: 'dark:text-purple-300'
+  },
+  {
+    icon: 'event',
+    bgColor: 'bg-teal-100',
+    iconColor: 'text-teal-700',
+    darkBgColor: 'dark:bg-teal-900/30',
+    darkIconColor: 'dark:text-teal-300'
+  },
+  {
+    icon: 'flight',
+    bgColor: 'bg-orange-100',
+    iconColor: 'text-orange-700',
+    darkBgColor: 'dark:bg-orange-900/30',
+    darkIconColor: 'dark:text-orange-300'
+  }
+]
+
+const seedOrganizations: Organization[] = [
   {
     id: 'ORG-001',
     name: 'Acme Corp Hospitality',
@@ -84,16 +153,129 @@ const organizationsData = [
   }
 ]
 
+const hashId = (value: string) =>
+  value.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+const toOrganization = (apiOrg: ApiOrganization): Organization => {
+  const hash = hashId(apiOrg.id)
+  const theme = iconThemes[hash % iconThemes.length]
+  const amountReceived = 90000 + (hash % 260000)
+  const pendingPayment = (hash * 79) % 85000
+
+  return {
+    id: apiOrg.id,
+    name: apiOrg.name,
+    icon: theme.icon,
+    bgColor: theme.bgColor,
+    iconColor: theme.iconColor,
+    darkBgColor: theme.darkBgColor,
+    darkIconColor: theme.darkIconColor,
+    gst: apiOrg.gst ?? '-',
+    creditPeriod: apiOrg.creditPeriod ?? '30 Days',
+    paymentTerms: apiOrg.paymentTerms ?? 'Net 30',
+    status: apiOrg.status,
+    amountReceived,
+    pendingPayment
+  }
+}
+
 export default function OrganizationsClient() {
-  const router = useRouter()
+  const [organizations, setOrganizations] = useState<Organization[]>(seedOrganizations)
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [organizationName, setOrganizationName] = useState('')
+  const [gst, setGst] = useState('')
+  const [creditPeriod, setCreditPeriod] = useState('30 Days')
+  const [paymentTerms, setPaymentTerms] = useState('Net 30')
+  const [registerStatus, setRegisterStatus] = useState<OrganizationStatus>('active')
+  const [registerError, setRegisterError] = useState<string | null>(null)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [generatedCredentials, setGeneratedCredentials] = useState<{ userId: string; password: string } | null>(null)
 
-  const filteredOrganizations = organizationsData.filter(org => {
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/organizations`, { credentials: 'include' })
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+
+        const data = (await response.json()) as { organizations?: ApiOrganization[] }
+        if (data.organizations && data.organizations.length > 0) {
+          setOrganizations(data.organizations.map(toOrganization))
+        }
+      } catch {
+        setOrganizations(seedOrganizations)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    void loadOrganizations()
+  }, [])
+
+  const filteredOrganizations = useMemo(() => organizations.filter(org => {
     const matchesSearch = org.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = !statusFilter || org.status === statusFilter
     return matchesSearch && matchesStatus
-  })
+  }), [organizations, searchQuery, statusFilter])
+
+  const handleCreateOrganization = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setRegisterError(null)
+    setGeneratedCredentials(null)
+    setIsRegistering(true)
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/organizations`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: organizationName,
+          gst,
+          creditPeriod,
+          paymentTerms,
+          status: registerStatus
+        })
+      })
+
+      const data = (await response.json()) as {
+        organization?: ApiOrganization
+        credentials?: { userId: string; password: string }
+        error?: { message?: string }
+      }
+
+      if (!response.ok || !data.organization || !data.credentials) {
+        throw new Error(data.error?.message ?? 'Unable to create organization')
+      }
+
+      setOrganizations((current) => [toOrganization(data.organization as ApiOrganization), ...current])
+      setGeneratedCredentials(data.credentials)
+      setOrganizationName('')
+      setGst('')
+      setCreditPeriod('30 Days')
+      setPaymentTerms('Net 30')
+      setRegisterStatus('active')
+    } catch (error) {
+      setRegisterError(error instanceof Error ? error.message : 'Unable to create organization')
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
+  const closeRegisterModal = () => {
+    if (isRegistering) {
+      return
+    }
+    setShowRegisterModal(false)
+    setRegisterError(null)
+    setGeneratedCredentials(null)
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark">
@@ -117,7 +299,10 @@ export default function OrganizationsClient() {
                 <h1 className="text-slate-900 dark:text-white text-3xl font-extrabold leading-tight tracking-[-0.033em]">Corporate Organizations</h1>
                 <p className="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal">Manage corporate billing accounts, credit limits, and invoice details.</p>
               </div>
-              <button className="flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-blue-600 focus:ring-4 focus:ring-blue-500/30">
+              <button
+                onClick={() => setShowRegisterModal(true)}
+                className="flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-white shadow-sm shadow-blue-500/20 transition-all hover:bg-blue-600 focus:ring-4 focus:ring-blue-500/30"
+              >
                 <span className="material-symbols-outlined mr-2 text-[20px]">add</span>
                 <span className="text-sm font-bold leading-normal">Register New Organization</span>
               </button>
@@ -139,7 +324,7 @@ export default function OrganizationsClient() {
               <div className="flex items-center gap-3">
                 <div className="relative min-w-[180px]">
                   <select 
-                    className="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-3 pl-4 pr-10 text-base text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full appearance-none bg-none rounded-lg border border-slate-200 bg-slate-50 py-3 pl-4 pr-10 text-base text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -173,7 +358,15 @@ export default function OrganizationsClient() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {filteredOrganizations.map((org) => (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">Loading organizations...</td>
+                      </tr>
+                    ) : filteredOrganizations.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">No organizations found</td>
+                      </tr>
+                    ) : filteredOrganizations.map((org) => (
                       <tr key={org.id} className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                         <td className="px-6 py-4">
                           <Link href={`/hotel-finance/organizations/${org.id}`} className="flex items-center gap-3">
@@ -226,7 +419,7 @@ export default function OrganizationsClient() {
 
               {/* Pagination */}
               <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 sm:flex-row">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Showing <span className="font-semibold text-slate-900 dark:text-white">1</span> to <span className="font-semibold text-slate-900 dark:text-white">{filteredOrganizations.length}</span> of <span className="font-semibold text-slate-900 dark:text-white">48</span> results</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">Showing <span className="font-semibold text-slate-900 dark:text-white">1</span> to <span className="font-semibold text-slate-900 dark:text-white">{filteredOrganizations.length}</span> of <span className="font-semibold text-slate-900 dark:text-white">{organizations.length}</span> results</span>
                 <div className="flex items-center gap-1">
                   <button className="flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
                     <span className="material-symbols-outlined text-sm">chevron_left</span>
@@ -244,6 +437,109 @@ export default function OrganizationsClient() {
                 </div>
               </div>
             </div>
+
+            {showRegisterModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Register Organization</h2>
+                    <button
+                      onClick={closeRegisterModal}
+                      className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                    >
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+
+                  <form className="space-y-4" onSubmit={handleCreateOrganization}>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Organization Name</label>
+                      <input
+                        value={organizationName}
+                        onChange={(event) => setOrganizationName(event.target.value)}
+                        required
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        placeholder="Example Corp Pvt Ltd"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">GST</label>
+                        <input
+                          value={gst}
+                          onChange={(event) => setGst(event.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          placeholder="27AAAAA0000A1Z5"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
+                        <select
+                          value={registerStatus}
+                          onChange={(event) => setRegisterStatus(event.target.value as OrganizationStatus)}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        >
+                          <option value="active">Active</option>
+                          <option value="on-hold">On Hold</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Credit Period</label>
+                        <input
+                          value={creditPeriod}
+                          onChange={(event) => setCreditPeriod(event.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          placeholder="30 Days"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Terms</label>
+                        <input
+                          value={paymentTerms}
+                          onChange={(event) => setPaymentTerms(event.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          placeholder="Net 30"
+                        />
+                      </div>
+                    </div>
+
+                    {registerError && (
+                      <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+                        {registerError}
+                      </div>
+                    )}
+
+                    {generatedCredentials && (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        <p className="font-semibold">Corporate login credentials generated</p>
+                        <p className="mt-1">User ID: <span className="font-bold">{generatedCredentials.userId}</span></p>
+                        <p>Password: <span className="font-bold">{generatedCredentials.password}</span></p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={closeRegisterModal}
+                        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        Close
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isRegistering}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-70"
+                      >
+                        {isRegistering ? 'Creating...' : 'Create Organization'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>

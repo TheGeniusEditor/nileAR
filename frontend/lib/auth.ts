@@ -9,7 +9,10 @@ export interface AuthResponse {
   accessToken: string;
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const apiBaseUrl =
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  "http://localhost:4000";
 
 const parseErrorMessage = async (response: Response) => {
   try {
@@ -20,15 +23,41 @@ const parseErrorMessage = async (response: Response) => {
   }
 };
 
+const withAlternateLocalhost = (url: string) => {
+  if (url.includes("localhost")) {
+    return url.replace("localhost", "127.0.0.1");
+  }
+
+  if (url.includes("127.0.0.1")) {
+    return url.replace("127.0.0.1", "localhost");
+  }
+
+  return null;
+};
+
 const request = async <T>(path: string, options: RequestInit) => {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const requestUrl = `${apiBaseUrl}${path}`;
+  const fetchOptions: RequestInit = {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers ?? {})
     }
-  });
+  };
+
+  let response: Response;
+
+  try {
+    response = await fetch(requestUrl, fetchOptions);
+  } catch (error) {
+    const alternateUrl = withAlternateLocalhost(requestUrl);
+    if (!(error instanceof TypeError) || !alternateUrl) {
+      throw error;
+    }
+
+    response = await fetch(alternateUrl, fetchOptions);
+  }
 
   if (!response.ok) {
     const message = await parseErrorMessage(response);
