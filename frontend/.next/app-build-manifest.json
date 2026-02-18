@@ -16,25 +16,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/hotel-finance/login/page.js"
     ],
-    "/hotel-finance/register/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/hotel-finance/register/page.js"
-    ],
     "/hotel-finance/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/hotel-finance/page.js"
     ],
-    "/hotel-finance/bookings/page": [
+    "/hotel-finance/organizations/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/hotel-finance/bookings/page.js"
+      "static/chunks/app/hotel-finance/organizations/page.js"
     ],
-    "/hotel-finance/bookings/[bookingId]/bills/page": [
+    "/hotel-finance/organizations/[organizationId]/contract/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/hotel-finance/bookings/[bookingId]/bills/page.js"
+      "static/chunks/app/hotel-finance/organizations/[organizationId]/contract/page.js"
+    ],
+    "/corporate-portal/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/corporate-portal/login/page.js"
     ]
   }
 }
