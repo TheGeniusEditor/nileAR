@@ -7,7 +7,7 @@ import { loginCorporate } from '@/lib/corporateAuth'
 
 export default function CorporateLoginPage() {
   const router = useRouter()
-  const [userId, setUserId] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -18,7 +18,12 @@ export default function CorporateLoginPage() {
     setIsSubmitting(true)
 
     try {
-      await loginCorporate(userId, password)
+      const response = await loginCorporate(username, password)
+      if (response.mustSetPassword) {
+        router.push('/corporate-portal/settings?onboarding=1')
+        return
+      }
+
       router.push('/corporate-portal')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed'
@@ -41,19 +46,19 @@ export default function CorporateLoginPage() {
           </Link>
         </div>
         <h1 className="text-lg font-semibold text-slate-900">Corporate Portal Login</h1>
-        <p className="mt-1 text-sm text-slate-500">Use the generated organization credentials to continue.</p>
+        <p className="mt-1 text-sm text-slate-500">Use generated credentials for first login, then use your company email.</p>
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-500" htmlFor="corporate-user-id">
-              User ID
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-500" htmlFor="corporate-username">
+              User ID or Email
             </label>
             <input
-              id="corporate-user-id"
-              name="userId"
+              id="corporate-username"
+              name="username"
               type="text"
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              placeholder="CORP-ABC123"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="CORP-ABC123 or company@email.com"
               required
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />

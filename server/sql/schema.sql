@@ -36,16 +36,31 @@ CREATE TABLE IF NOT EXISTS organizations (
   gst text,
   credit_period text,
   payment_terms text,
+  registration_number text,
+  registered_address text,
+  contact_email citext,
+  contact_phone text,
   status text NOT NULL DEFAULT 'active',
   corporate_user_id text UNIQUE NOT NULL,
   corporate_password_hash text NOT NULL,
+  password_reset_required boolean NOT NULL DEFAULT true,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS registration_number text,
+  ADD COLUMN IF NOT EXISTS registered_address text,
+  ADD COLUMN IF NOT EXISTS contact_email citext,
+  ADD COLUMN IF NOT EXISTS contact_phone text,
+  ADD COLUMN IF NOT EXISTS password_reset_required boolean NOT NULL DEFAULT true;
+
 CREATE INDEX IF NOT EXISTS organizations_name_idx ON organizations(name);
 CREATE INDEX IF NOT EXISTS organizations_status_idx ON organizations(status);
+CREATE UNIQUE INDEX IF NOT EXISTS organizations_contact_email_uniq
+  ON organizations(contact_email)
+  WHERE contact_email IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
 BEGIN

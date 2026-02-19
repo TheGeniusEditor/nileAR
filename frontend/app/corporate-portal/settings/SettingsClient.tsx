@@ -1,30 +1,56 @@
 "use client"
 
-import { useState } from "react"
+import { FormEvent, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Sidebar from "@/app/components/Sidebar"
 import Header from "@/app/components/Header"
+import {
+  corporateTokenStorage,
+  fetchCorporateProfile,
+  setCorporatePassword,
+  updateCorporateProfile
+} from "@/lib/corporateAuth"
+
+interface CompanyForm {
+  name: string
+  registrationNumber: string
+  address: string
+  contactEmail: string
+  phone: string
+}
+
+const emptyCompanyForm: CompanyForm = {
+  name: "",
+  registrationNumber: "",
+  address: "",
+  contactEmail: "",
+  phone: ""
+}
 
 export default function SettingsClient() {
+  const router = useRouter()
+
   const [activeTab, setActiveTab] = useState("company-details")
-  const [companyData, setCompanyData] = useState({
-    name: "Acme Corporation",
-    registrationNumber: "REG-2023-8899",
-    address: "123 Innovation Drive, Tech Park, Silicon Valley, CA 94025",
-    email: "billing@acmecorp.com",
-    phone: "+1 (555) 012-3456",
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  const [mustSetPassword, setMustSetPassword] = useState(false)
+  const [isSettingPassword, setIsSettingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" })
+
+  const [companyForm, setCompanyForm] = useState<CompanyForm>(emptyCompanyForm)
+  const [isOnboarding, setIsOnboarding] = useState(false)
+
   const [taxId, setTaxId] = useState("9918USA29910Z1")
   const [notifications, setNotifications] = useState({
     invoiceAlerts: true,
-    paymentReminders: true,
+    paymentReminders: true
   })
-
-  const handleCompanyDataChange = (field: string, value: string) => {
-    setCompanyData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
 
   const authorizedPayers = [
     {
@@ -32,23 +58,154 @@ export default function SettingsClient() {
       name: "John Doe",
       role: "Primary Admin",
       email: "admin@acme.com",
-      status: "Active",
+      status: "Active"
     },
     {
       id: 2,
       name: "Sarah Smith",
       role: "Finance Manager",
       email: "finance@acme.com",
-      status: "Active",
+      status: "Active"
     },
     {
       id: 3,
       name: "Mike Johnson",
       role: "Travel Coordinator",
       email: "travel@acme.com",
-      status: "Inactive",
-    },
+      status: "Inactive"
+    }
   ]
+
+  useEffect(() => {
+    const token = corporateTokenStorage.get()
+    if (!token) {
+      router.replace("/corporate-portal/login")
+      return
+    }
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      setIsOnboarding(params.get("onboarding") === "1")
+    }
+
+    const loadProfile = async () => {
+      setIsLoading(true)
+      setLoadError(null)
+
+      try {
+        const data = await fetchCorporateProfile()
+        setCompanyForm({
+          name: data.profile.name,
+          registrationNumber: data.profile.registrationNumber ?? "",
+          address: data.profile.address ?? "",
+          contactEmail: data.profile.contactEmail ?? "",
+          phone: data.profile.phone ?? ""
+        })
+        setMustSetPassword(data.mustSetPassword)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to load company details"
+        setLoadError(message)
+
+        if (message.toLowerCase().includes("unauthorized")) {
+          corporateTokenStorage.clear()
+          router.replace("/corporate-portal/login")
+        }
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    void loadProfile()
+  }, [router])
+
+  const updateCompanyField = (field: keyof CompanyForm, value: string) => {
+    setCompanyForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSaveCompany = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaveMessage(null)
+    setSaveError(null)
+    setIsSavingProfile(true)
+
+    try {
+      const response = await updateCorporateProfile({
+        name: companyForm.name,
+        registrationNumber: companyForm.registrationNumber,
+        address: companyForm.address,
+        contactEmail: companyForm.contactEmail,
+        phone: companyForm.phone
+      })
+
+      setCompanyForm({
+        name: response.profile.name,
+        registrationNumber: response.profile.registrationNumber ?? "",
+        address: response.profile.address ?? "",
+        contactEmail: response.profile.contactEmail ?? "",
+        phone: response.profile.phone ?? ""
+      })
+      setSaveMessage("Company details saved successfully.")
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save company details")
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleSetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setPasswordError(null)
+    setPasswordMessage(null)
+
+    const { newPassword, confirmPassword } = passwordForm
+    if (newPassword.length < 12 || confirmPassword.length < 12) {
+      setPasswordError("Password must be at least 12 characters long")
+      return
+    }
+
+    const checks = [
+      /[a-z]/.test(newPassword),
+      /[A-Z]/.test(newPassword),
+      /[0-9]/.test(newPassword),
+      /[^A-Za-z0-9]/.test(newPassword)
+    ]
+
+    if (checks.some((ok) => !ok)) {
+      setPasswordError("Password must include upper, lower, number, and symbol characters")
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match")
+      return
+    }
+
+    setIsSettingPassword(true)
+
+    try {
+      const result = await setCorporatePassword(newPassword, confirmPassword)
+      setMustSetPassword(result.mustSetPassword)
+      setPasswordForm({ newPassword: "", confirmPassword: "" })
+      setPasswordMessage("Password updated. You can now use your company email and new password for login.")
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Unable to set password")
+    } finally {
+      setIsSettingPassword(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-background-light dark:bg-background-dark text-[#0d121b] dark:text-white">
+        <Sidebar title="Corporate Portal" logoIcon="apartment" />
+        <div className="flex-1 flex items-center justify-center text-[#4c669a] dark:text-gray-400">Loading company settings...</div>
+      </div>
+    )
+  }
+
+  const onboardingHint = isOnboarding || mustSetPassword
+    ? "First login detected. Please complete company details and set your own password."
+    : null
 
   return (
     <div className="flex h-screen bg-background-light dark:bg-background-dark text-[#0d121b] dark:text-white">
@@ -58,7 +215,6 @@ export default function SettingsClient() {
         <main className="flex-1 overflow-y-auto">
           <div className="py-8 px-4 sm:px-8 lg:px-40">
             <div className="mx-auto w-full max-w-7xl flex flex-col gap-6">
-              {/* Breadcrumbs */}
               <nav className="flex items-center gap-2 text-sm text-[#4c669a] dark:text-gray-400">
                 <a href="/corporate-portal" className="hover:text-primary transition-colors">
                   Home
@@ -67,7 +223,6 @@ export default function SettingsClient() {
                 <span className="font-medium text-[#0d121b] dark:text-white">Settings</span>
               </nav>
 
-              {/* Page Heading */}
               <div className="flex flex-wrap justify-between gap-4 mb-2">
                 <div>
                   <h1 className="text-3xl sm:text-4xl font-black leading-tight tracking-tight text-[#0d121b] dark:text-white">
@@ -85,21 +240,27 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Layout Grid: Sidebar + Content */}
+              {onboardingHint && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300">
+                  {onboardingHint}
+                </div>
+              )}
+
+              {loadError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                  {loadError}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Sidebar Navigation */}
                 <aside className="lg:col-span-3 sticky top-24">
                   <div className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm overflow-hidden">
                     <div className="p-4 border-b border-[#e7ebf3] dark:border-[#2d3748] flex items-center gap-3">
-                      <div
-                        className="h-10 w-10 rounded-lg bg-cover bg-center"
-                        style={{
-                          backgroundImage:
-                            'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAme94LaPscbDTTRfrCwBksil6HOGacmrwlCilgAEmS4GdfqjppEPrP64hccVFZrrYHtwCt9LP2cSJrRBDpJdSnKOBEnJcsxJBDR3BIp6D1aCHvpanEivMZFEGB6hR0rR51ou4xr3MiVim3AWXjwXGyJiOXTbXqAlYKXBCuaTNZz1ZaDNmFsBFbJYDu6EBb2pyec8FjhlCzF96NV8Sj6w0oPechgcwRvePvKQb4DpAcdS-RklkBqc5AH7VxoABUtE8SqiK3jKX3790")',
-                        }}
-                      ></div>
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-primary">apartment</span>
+                      </div>
                       <div>
-                        <p className="text-sm font-bold text-[#0d121b] dark:text-white">Acme Corp</p>
+                        <p className="text-sm font-bold text-[#0d121b] dark:text-white">{companyForm.name || "Company"}</p>
                         <p className="text-xs text-[#4c669a] dark:text-gray-400">Enterprise Account</p>
                       </div>
                     </div>
@@ -152,101 +313,167 @@ export default function SettingsClient() {
                   </div>
                 </aside>
 
-                {/* Main Content */}
                 <main className="lg:col-span-9 flex flex-col gap-6">
-                  {/* Profile Header Card */}
                   <div className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] p-6 shadow-sm flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                    <div
-                      className="h-24 w-24 sm:h-28 sm:w-28 flex-shrink-0 rounded-xl bg-cover bg-center border border-[#e7ebf3] dark:border-[#2d3748]"
-                      style={{
-                        backgroundImage:
-                          'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBkzdmoO2Otao02007IYbh4-IXrDb-S8Fdg-9SsuxDWZxqu-HI_M6geb0Ue3250qXrQ9VvpkCJThzI_vTIuYZODXUHR3I_UQ3PRw-X96F7aCosvJ6jqcFvfXxOgh4WYnmPCHx9kZb4yTnrxWppP4j78eWUenclJ1a_lYeB2MMO4rOLH1VtwA2OcvR0Vjg-4BqHNeqQjrwuf5ROu7wxEW4FCCz4Og0d7Bq6BOEuLKMnbSaq-1X97_Zfq0NfmIn0LAwllV4VV05VIAj4")',
-                      }}
-                    ></div>
+                    <div className="h-24 w-24 sm:h-28 sm:w-28 flex-shrink-0 rounded-xl bg-primary/10 border border-[#e7ebf3] dark:border-[#2d3748] flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary text-4xl">apartment</span>
+                    </div>
                     <div className="flex-1 text-center sm:text-left">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                         <div>
-                          <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white mb-1">Acme Corporation</h2>
+                          <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white mb-1">{companyForm.name || "Company"}</h2>
                           <p className="text-[#4c669a] dark:text-gray-400 text-sm mb-4">
-                            Client ID: <span className="font-mono text-[#0d121b] dark:text-gray-300">987654321</span> • Since 2018
+                            Contact email: <span className="font-medium text-[#0d121b] dark:text-gray-300">{companyForm.contactEmail || "Not set"}</span>
+                          </p>
+                          <p className="text-[#4c669a] dark:text-gray-400 text-sm mb-4">
+                            Registration: <span className="font-medium text-[#0d121b] dark:text-gray-300">{companyForm.registrationNumber || "Not set"}</span>
+                            {" • "}
+                            Phone: <span className="font-medium text-[#0d121b] dark:text-gray-300">{companyForm.phone || "Not set"}</span>
                           </p>
                           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-semibold border border-green-100 dark:border-green-800">
                             <span className="w-2 h-2 rounded-full bg-green-500"></span>
                             Active Account
                           </div>
                         </div>
-                        <button className="text-primary text-sm font-medium hover:underline flex items-center gap-1 mx-auto sm:mx-0">
-                          <span className="material-symbols-outlined icon-sm">edit</span>
-                          Edit Profile
-                        </button>
                       </div>
                     </div>
                   </div>
 
-                  {/* Company Information Section */}
                   {activeTab === "company-details" && (
                     <section className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
-                      <div className="p-6 border-b border-[#e7ebf3] dark:border-[#2d3748] flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-[#0d121b] dark:text-white">Company Information</h3>
-                        <button className="text-sm font-semibold text-primary">Save Changes</button>
-                      </div>
-                      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Company Name</label>
-                          <input
-                            type="text"
-                            value={companyData.name}
-                            onChange={(e) => handleCompanyDataChange("name", e.target.value)}
-                            className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                          />
+                      <form onSubmit={handleSaveCompany}>
+                        <div className="p-6 border-b border-[#e7ebf3] dark:border-[#2d3748] flex justify-between items-center">
+                          <h3 className="text-lg font-bold text-[#0d121b] dark:text-white">Company Information</h3>
+                          <button
+                            type="submit"
+                            disabled={isSavingProfile}
+                            className="text-sm font-semibold text-primary disabled:opacity-60"
+                          >
+                            {isSavingProfile ? "Saving..." : "Save Changes"}
+                          </button>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Registration Number</label>
-                          <input
-                            type="text"
-                            value={companyData.registrationNumber}
-                            onChange={(e) => handleCompanyDataChange("registrationNumber", e.target.value)}
-                            className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                          />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Registered Address</label>
-                          <input
-                            type="text"
-                            value={companyData.address}
-                            onChange={(e) => handleCompanyDataChange("address", e.target.value)}
-                            className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Contact Email</label>
-                          <div className="relative">
-                            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 icon-sm">mail</span>
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Company Name</label>
                             <input
-                              type="email"
-                              value={companyData.email}
-                              onChange={(e) => handleCompanyDataChange("email", e.target.value)}
-                              className="w-full pl-10 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                              type="text"
+                              value={companyForm.name}
+                              onChange={(e) => updateCompanyField("name", e.target.value)}
+                              required
+                              className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
                             />
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Phone Number</label>
-                          <div className="relative">
-                            <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 icon-sm">call</span>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Registration Number</label>
                             <input
-                              type="tel"
-                              value={companyData.phone}
-                              onChange={(e) => handleCompanyDataChange("phone", e.target.value)}
-                              className="w-full pl-10 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                              type="text"
+                              value={companyForm.registrationNumber}
+                              onChange={(e) => updateCompanyField("registrationNumber", e.target.value)}
+                              className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
                             />
                           </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Registered Address</label>
+                            <input
+                              type="text"
+                              value={companyForm.address}
+                              onChange={(e) => updateCompanyField("address", e.target.value)}
+                              className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Contact Email</label>
+                            <div className="relative">
+                              <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 icon-sm">mail</span>
+                              <input
+                                type="email"
+                                value={companyForm.contactEmail}
+                                onChange={(e) => updateCompanyField("contactEmail", e.target.value)}
+                                className="w-full pl-10 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#0d121b] dark:text-gray-300">Phone Number</label>
+                            <div className="relative">
+                              <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 icon-sm">call</span>
+                              <input
+                                type="tel"
+                                value={companyForm.phone}
+                                onChange={(e) => updateCompanyField("phone", e.target.value)}
+                                className="w-full pl-10 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm text-[#0d121b] dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          {saveError && (
+                            <div className="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                              {saveError}
+                            </div>
+                          )}
+
+                          {saveMessage && (
+                            <div className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
+                              {saveMessage}
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      </form>
+
+                      {mustSetPassword && (
+                        <div className="px-6 pb-6">
+                          <div className="rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] p-4">
+                            <h4 className="text-sm font-bold text-[#0d121b] dark:text-white">Set Your Password</h4>
+                            <p className="text-xs text-[#4c669a] dark:text-gray-400 mt-1">Set your own password now. After this, you can login with your contact email.</p>
+
+                            <form className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4" onSubmit={handleSetPassword}>
+                              <input
+                                type="password"
+                                value={passwordForm.newPassword}
+                                onChange={(event) => setPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+                                minLength={12}
+                                required
+                                placeholder="New password"
+                                className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm"
+                              />
+                              <input
+                                type="password"
+                                value={passwordForm.confirmPassword}
+                                onChange={(event) => setPasswordForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                                minLength={12}
+                                required
+                                placeholder="Confirm password"
+                                className="w-full rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] px-3 py-2.5 text-sm"
+                              />
+
+                              {passwordError && (
+                                <div className="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+                                  {passwordError}
+                                </div>
+                              )}
+
+                              {passwordMessage && (
+                                <div className="md:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
+                                  {passwordMessage}
+                                </div>
+                              )}
+
+                              <div className="md:col-span-2">
+                                <button
+                                  type="submit"
+                                  disabled={isSettingPassword}
+                                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {isSettingPassword ? "Setting Password..." : "Set Password"}
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
                     </section>
                   )}
 
-                  {/* Billing & Tax Section */}
                   {activeTab === "billing-tax" && (
                     <section className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
                       <div className="p-6 border-b border-[#e7ebf3] dark:border-[#2d3748]">
@@ -272,43 +499,10 @@ export default function SettingsClient() {
                             Request Update
                           </button>
                         </div>
-                        <hr className="border-[#e7ebf3] dark:border-[#2d3748]" />
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-sm font-bold text-[#0d121b] dark:text-white">Payment Methods</h4>
-                            <div className="flex items-center gap-1 text-[#4c669a] dark:text-gray-400 text-xs">
-                              <span className="material-symbols-outlined icon-sm">lock</span>
-                              Secure Payment
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-center justify-between p-4 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622]">
-                              <div className="flex items-center gap-4">
-                                <div className="h-10 w-14 bg-white dark:bg-gray-700 rounded border border-[#e7ebf3] dark:border-gray-600 flex items-center justify-center">
-                                  <img
-                                    alt="Mastercard Logo"
-                                    className="h-6"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPPSiJNM_Vi0G2BonCVXiE2X86CzxhrEuQdx2rCghiyQbtqul5moAkNoeziwCr5UUBh0iUK7f9oMI-M_7opA-RkSSbkigfQ8ctThwcDHg7jnAtoRk8wrjhTb6Ug0LxwUlsBjyuLuNx04ucl8mvfyJhGuht_DOe2NL7PTlYgU813i62Vj9HLIDsDLT88U40dq1JwO_bID9JOK98iFluVOKV4_H3h1CMu24cpmyWmKWcc7J9gA_ZUIke9X7qMGy9uFZ4jxUo0Todj2U"
-                                  />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-[#0d121b] dark:text-white">Mastercard ending in 8834</p>
-                                  <p className="text-xs text-[#4c669a] dark:text-gray-400">Expires 12/25 • Default</p>
-                                </div>
-                              </div>
-                              <button className="text-sm font-medium text-[#4c669a] dark:text-gray-400 hover:text-primary transition-colors">Edit</button>
-                            </div>
-                            <button className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-dashed border-[#4c669a] text-[#4c669a] dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-primary hover:text-primary transition-all text-sm font-medium">
-                              <span className="material-symbols-outlined icon-sm">add</span>
-                              Add New Payment Method
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     </section>
                   )}
 
-                  {/* Authorized Payers Section */}
                   {activeTab === "authorized-payers" && (
                     <section className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
                       <div className="p-6 border-b border-[#e7ebf3] dark:border-[#2d3748] flex flex-wrap gap-4 justify-between items-center">
@@ -359,15 +553,9 @@ export default function SettingsClient() {
                           </tbody>
                         </table>
                       </div>
-                      <div className="p-4 border-t border-[#e7ebf3] dark:border-[#2d3748] bg-[#f8f9fc] dark:bg-[#101622] rounded-b-xl flex justify-center">
-                        <button className="text-sm font-medium text-[#4c669a] hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
-                          View All Payers
-                        </button>
-                      </div>
                     </section>
                   )}
 
-                  {/* Notifications Section */}
                   {activeTab === "notifications" && (
                     <section className="bg-white dark:bg-[#1C2636] rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm mb-10">
                       <div className="p-6 border-b border-[#e7ebf3] dark:border-[#2d3748]">
@@ -375,7 +563,6 @@ export default function SettingsClient() {
                         <p className="text-sm text-[#4c669a] dark:text-gray-400 mt-1">Choose how and when you want to be notified.</p>
                       </div>
                       <div className="p-6 flex flex-col gap-6">
-                        {/* Invoice Alerts */}
                         <div className="flex items-center justify-between">
                           <div className="flex gap-4">
                             <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
@@ -396,9 +583,9 @@ export default function SettingsClient() {
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                           </label>
                         </div>
+
                         <hr className="border-[#e7ebf3] dark:border-[#2d3748]" />
 
-                        {/* Due Date Reminders */}
                         <div className="flex items-center justify-between">
                           <div className="flex gap-4">
                             <div className="h-10 w-10 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 flex items-center justify-center">

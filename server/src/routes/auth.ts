@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
@@ -38,8 +39,45 @@ const loginSchema = z.object({
 });
 
 const corporateLoginSchema = z.object({
-  userId: z.string().min(4).max(60),
+  username: z.string().min(4).max(320),
   password: z.string().min(1).max(128)
+});
+
+const corporateProfileSchema = z.object({
+  name: z.string().min(2).max(160),
+  registrationNumber: z.string().max(64).optional().nullable(),
+  address: z.string().max(320).optional().nullable(),
+  contactEmail: z.string().email().max(320).optional().nullable(),
+  phone: z.string().max(40).optional().nullable()
+});
+
+const corporateSetPasswordSchema = z.object({
+  newPassword: z.string().min(12).max(128),
+  confirmPassword: z.string().min(12).max(128)
+}).superRefine((value, ctx) => {
+  if (value.newPassword !== value.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["confirmPassword"],
+      message: "Passwords do not match"
+    });
+  }
+
+  const password = value.newPassword;
+  const checks = [
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password)
+  ];
+
+  if (checks.some((ok) => !ok)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["newPassword"],
+      message: "Password must include upper, lower, number, and symbol characters"
+    });
+  }
 });
 
 const parseTtlMs = (ttl: string) => {
@@ -96,6 +134,53 @@ const createCorporateAccessToken = (organizationId: string, corporateUserId: str
   );
 
   return token;
+};
+
+interface CorporateAccessTokenPayload {
+  sub: string;
+  role: string;
+  scope: string;
+  corporateUserId: string;
+  iat: number;
+  exp: number;
+  iss: string;
+  aud: string;
+}
+
+const getCorporatePayload = (req: Request, res: Response): CorporateAccessTokenPayload | null => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    res.status(401).json({ error: { message: "Unauthorized" } });
+    return null;
+  }
+
+  const token = header.slice("Bearer ".length).trim();
+
+  try {
+    const payload = jwt.verify(token, config.jwtAccessSecret, {
+      issuer: "hotel-finance-api",
+      audience: "corporate-portal-web"
+    }) as CorporateAccessTokenPayload;
+
+    if (payload.scope !== "corporate-portal" || payload.role !== "corporate_portal_user") {
+      res.status(403).json({ error: { message: "Forbidden" } });
+      return null;
+    }
+
+    return payload;
+  } catch {
+    res.status(401).json({ error: { message: "Unauthorized" } });
+    return null;
+  }
+};
+
+const normalizeOptional = (value?: string | null) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
 };
 
 const createRefreshToken = async (userId: string, userAgent?: string, ipAddress?: string) => {
@@ -285,14 +370,17 @@ router.post("/logout", async (req, res, next) => {
 
 router.post("/corporate/login", authLimiter, async (req, res, next) => {
   try {
-    const { userId, password } = corporateLoginSchema.parse(req.body);
-    const normalizedUserId = userId.trim().toUpperCase();
+    const { username, password } = corporateLoginSchema.parse(req.body);
+    const normalizedUsername = username.trim();
+    const userIdCandidate = normalizedUsername.toUpperCase();
+    const emailCandidate = normalizedUsername.toLowerCase();
+    const isEmailUsername = emailCandidate.includes("@");
 
     const result = await query(
-      `SELECT id, name, corporate_user_id, corporate_password_hash, is_active
+      `SELECT id, name, corporate_user_id, corporate_password_hash, contact_email, password_reset_required, is_active
        FROM organizations
-       WHERE corporate_user_id = $1`,
-      [normalizedUserId]
+       WHERE corporate_user_id = $1 OR contact_email = $2`,
+      [userIdCandidate, emailCandidate]
     );
 
     if (result.rowCount === 0) {
@@ -305,6 +393,15 @@ router.post("/corporate/login", authLimiter, async (req, res, next) => {
     if (!organization.is_active) {
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return res.status(403).json({ error: { message: "Organization account disabled" } });
+    }
+
+    if (isEmailUsername && organization.password_reset_required) {
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      return res.status(403).json({
+        error: {
+          message: "Complete first-time setup using generated user ID before logging in with email"
+        }
+      });
     }
 
     const passwordOk = await bcrypt.compare(password, organization.corporate_password_hash);
@@ -321,7 +418,145 @@ router.post("/corporate/login", authLimiter, async (req, res, next) => {
         name: organization.name,
         role: "corporate_portal_user"
       },
+      mustSetPassword: Boolean(organization.password_reset_required),
       accessToken
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/corporate/me", async (req, res, next) => {
+  try {
+    const payload = getCorporatePayload(req, res);
+    if (!payload) {
+      return;
+    }
+
+    const result = await query(
+      `SELECT id, name, corporate_user_id, registration_number, registered_address,
+              contact_email, contact_phone, password_reset_required, is_active
+       FROM organizations
+       WHERE id = $1`,
+      [payload.sub]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(401).json({ error: { message: "Unauthorized" } });
+    }
+
+    const organization = result.rows[0];
+    if (!organization.is_active) {
+      return res.status(403).json({ error: { message: "Organization account disabled" } });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: organization.id,
+        userId: organization.corporate_user_id,
+        name: organization.name,
+        role: "corporate_portal_user"
+      },
+      profile: {
+        name: organization.name,
+        registrationNumber: organization.registration_number,
+        address: organization.registered_address,
+        contactEmail: organization.contact_email,
+        phone: organization.contact_phone
+      },
+      mustSetPassword: Boolean(organization.password_reset_required)
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.put("/corporate/profile", async (req, res, next) => {
+  try {
+    const payload = getCorporatePayload(req, res);
+    if (!payload) {
+      return;
+    }
+
+    const form = corporateProfileSchema.parse(req.body);
+
+    const result = await query(
+      `UPDATE organizations
+       SET name = $2,
+           registration_number = $3,
+           registered_address = $4,
+           contact_email = $5,
+           contact_phone = $6
+       WHERE id = $1
+       RETURNING id, name, corporate_user_id, registration_number, registered_address,
+                 contact_email, contact_phone, password_reset_required`,
+      [
+        payload.sub,
+        form.name.trim(),
+        normalizeOptional(form.registrationNumber),
+        normalizeOptional(form.address),
+        normalizeOptional(form.contactEmail)?.toLowerCase() ?? null,
+        normalizeOptional(form.phone)
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: { message: "Organization not found" } });
+    }
+
+    const organization = result.rows[0];
+
+    return res.status(200).json({
+      user: {
+        id: organization.id,
+        userId: organization.corporate_user_id,
+        name: organization.name,
+        role: "corporate_portal_user"
+      },
+      profile: {
+        name: organization.name,
+        registrationNumber: organization.registration_number,
+        address: organization.registered_address,
+        contactEmail: organization.contact_email,
+        phone: organization.contact_phone
+      },
+      mustSetPassword: Boolean(organization.password_reset_required)
+    });
+  } catch (error: any) {
+    if (error?.code === "23505") {
+      return res.status(409).json({ error: { message: "Contact email is already in use" } });
+    }
+
+    return next(error);
+  }
+});
+
+router.post("/corporate/set-password", async (req, res, next) => {
+  try {
+    const payload = getCorporatePayload(req, res);
+    if (!payload) {
+      return;
+    }
+
+    const { newPassword } = corporateSetPasswordSchema.parse(req.body);
+    const passwordHash = await bcrypt.hash(newPassword, config.bcryptCost);
+
+    const result = await query(
+      `UPDATE organizations
+       SET corporate_password_hash = $2,
+           password_reset_required = false
+       WHERE id = $1
+       RETURNING id, password_reset_required`,
+      [payload.sub, passwordHash]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: { message: "Organization not found" } });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      mustSetPassword: Boolean(result.rows[0].password_reset_required)
     });
   } catch (error) {
     return next(error);
