@@ -13,7 +13,13 @@ const envSchema = z.object({
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL: z.string().default("7d"),
   BCRYPT_COST: z.coerce.number().int().min(10).max(15).default(12),
-  CORS_ORIGINS: z.string().default("http://localhost:3000")
+  CORS_ORIGINS: z.string().default("http://localhost:3000"),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z.enum(["true", "false"]).default("false"),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  SMTP_FROM: z.string().email().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -37,5 +43,12 @@ export const config = {
   refreshTokenTtl: env.REFRESH_TOKEN_TTL,
   bcryptCost: env.BCRYPT_COST,
   corsOrigins,
+  smtpHost: env.SMTP_HOST,
+  smtpPort: env.SMTP_PORT,
+  smtpSecure: env.SMTP_SECURE === "true",
+  smtpUser: env.SMTP_USER,
+  smtpPass: env.SMTP_PASS,
+  smtpFrom: env.SMTP_FROM,
+  mailEnabled: Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM),
   isProd: env.NODE_ENV === "production"
 };

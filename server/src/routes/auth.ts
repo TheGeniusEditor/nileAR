@@ -395,7 +395,11 @@ router.post("/corporate/login", authLimiter, async (req, res, next) => {
       return res.status(403).json({ error: { message: "Organization account disabled" } });
     }
 
-    if (isEmailUsername && organization.password_reset_required) {
+    if (
+      isEmailUsername &&
+      organization.password_reset_required &&
+      String(organization.corporate_user_id).toLowerCase() !== emailCandidate
+    ) {
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return res.status(403).json({
         error: {

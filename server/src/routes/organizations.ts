@@ -3,25 +3,29 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { query } from "../db.js";
 import { config } from "../config.js";
+import { sendCorporateCredentialsEmail } from "../services/mailer.js";
 
 const router = Router();
 
 const createOrganizationSchema = z.object({
   name: z.string().min(2).max(160),
+  corporateEmail: z.string().email().max(320),
   gst: z.string().max(32).optional().nullable(),
   creditPeriod: z.string().max(60).optional().nullable(),
   paymentTerms: z.string().max(120).optional().nullable(),
   status: z.enum(["active", "on-hold", "inactive"]).default("active")
 });
 
+const sendCredentialsSchema = z.object({
+  recipientEmail: z.string().email().max(320),
+  organizationName: z.string().min(2).max(160),
+  userId: z.string().min(4).max(320),
+  password: z.string().min(8).max(128)
+});
+
 const createOrganizationId = () => {
   const value = Math.floor(100 + Math.random() * 900);
   return `ORG-${value}`;
-};
-
-const createCorporateUserId = () => {
-  const value = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `CORP-${value}`;
 };
 
 const randomChars = (chars: string, length: number) => {
@@ -81,10 +85,11 @@ router.get("/", async (req, res, next) => {
 router.post("/", async (req, res, next) => {
   try {
     const payload = createOrganizationSchema.parse(req.body);
+    const normalizedCorporateEmail = payload.corporateEmail.trim().toLowerCase();
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
       const organizationId = createOrganizationId();
-      const corporateUserId = createCorporateUserId();
+      const corporateUserId = normalizedCorporateEmail;
       const generatedPassword = createCorporatePassword();
       const corporatePasswordHash = await bcrypt.hash(generatedPassword, config.bcryptCost);
 
@@ -92,9 +97,9 @@ router.post("/", async (req, res, next) => {
         const created = await query(
           `INSERT INTO organizations (
              id, name, gst, credit_period, payment_terms, status,
-             corporate_user_id, corporate_password_hash
+             contact_email, corporate_user_id, corporate_password_hash
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
            RETURNING id, name, gst, credit_period, payment_terms, status, corporate_user_id`,
           [
             organizationId,
@@ -103,6 +108,7 @@ router.post("/", async (req, res, next) => {
             payload.creditPeriod ?? null,
             payload.paymentTerms ?? null,
             payload.status,
+            normalizedCorporateEmail,
             corporateUserId,
             corporatePasswordHash
           ]
@@ -121,12 +127,23 @@ router.post("/", async (req, res, next) => {
           },
           credentials: {
             userId: organization.corporate_user_id,
-            password: generatedPassword
+            password: generatedPassword,
+            email: normalizedCorporateEmail
           }
         });
       } catch (error: any) {
         if (error?.code !== "23505") {
           throw error;
+        }
+
+        const constraint = String(error?.constraint ?? "");
+        if (
+          constraint.includes("organizations_contact_email_uniq") ||
+          constraint.includes("organizations_corporate_user_id_key")
+        ) {
+          return res.status(409).json({
+            error: { message: "Corporate email already exists for another organization" }
+          });
         }
       }
     }
@@ -134,6 +151,23 @@ router.post("/", async (req, res, next) => {
     return res.status(500).json({
       error: { message: "Unable to generate unique credentials. Please try again." }
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/send-credentials", async (req, res, next) => {
+  try {
+    const payload = sendCredentialsSchema.parse(req.body);
+
+    await sendCorporateCredentialsEmail({
+      recipientEmail: payload.recipientEmail.trim().toLowerCase(),
+      organizationName: payload.organizationName.trim(),
+      userId: payload.userId.trim(),
+      password: payload.password
+    });
+
+    return res.status(200).json({ ok: true });
   } catch (error) {
     return next(error);
   }

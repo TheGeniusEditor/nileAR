@@ -32,6 +32,13 @@ interface ApiOrganization {
   status: OrganizationStatus
 }
 
+interface GeneratedCredentials {
+  userId: string
+  password: string
+  email: string
+  organizationName: string
+}
+
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_URL ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -186,13 +193,17 @@ export default function OrganizationsClient() {
   const [statusFilter, setStatusFilter] = useState('')
   const [showRegisterModal, setShowRegisterModal] = useState(false)
   const [organizationName, setOrganizationName] = useState('')
+  const [corporateEmail, setCorporateEmail] = useState('')
   const [gst, setGst] = useState('')
   const [creditPeriod, setCreditPeriod] = useState('30 Days')
   const [paymentTerms, setPaymentTerms] = useState('Net 30')
   const [registerStatus, setRegisterStatus] = useState<OrganizationStatus>('active')
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [isRegistering, setIsRegistering] = useState(false)
-  const [generatedCredentials, setGeneratedCredentials] = useState<{ userId: string; password: string } | null>(null)
+  const [generatedCredentials, setGeneratedCredentials] = useState<GeneratedCredentials | null>(null)
+  const [isSendingCredentials, setIsSendingCredentials] = useState(false)
+  const [sendCredentialsMessage, setSendCredentialsMessage] = useState<string | null>(null)
+  const [sendCredentialsError, setSendCredentialsError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadOrganizations = async () => {
@@ -226,6 +237,8 @@ export default function OrganizationsClient() {
     event.preventDefault()
     setRegisterError(null)
     setGeneratedCredentials(null)
+    setSendCredentialsMessage(null)
+    setSendCredentialsError(null)
     setIsRegistering(true)
 
     try {
@@ -237,6 +250,7 @@ export default function OrganizationsClient() {
         },
         body: JSON.stringify({
           name: organizationName,
+          corporateEmail,
           gst,
           creditPeriod,
           paymentTerms,
@@ -246,7 +260,7 @@ export default function OrganizationsClient() {
 
       const data = (await response.json()) as {
         organization?: ApiOrganization
-        credentials?: { userId: string; password: string }
+        credentials?: { userId: string; password: string; email?: string }
         error?: { message?: string }
       }
 
@@ -255,8 +269,14 @@ export default function OrganizationsClient() {
       }
 
       setOrganizations((current) => [toOrganization(data.organization as ApiOrganization), ...current])
-      setGeneratedCredentials(data.credentials)
+      setGeneratedCredentials({
+        userId: data.credentials.userId,
+        password: data.credentials.password,
+        email: data.credentials.email ?? corporateEmail.trim().toLowerCase(),
+        organizationName: organizationName.trim()
+      })
       setOrganizationName('')
+      setCorporateEmail('')
       setGst('')
       setCreditPeriod('30 Days')
       setPaymentTerms('Net 30')
@@ -268,6 +288,43 @@ export default function OrganizationsClient() {
     }
   }
 
+  const handleSendCredentials = async () => {
+    if (!generatedCredentials) {
+      return
+    }
+
+    setSendCredentialsMessage(null)
+    setSendCredentialsError(null)
+    setIsSendingCredentials(true)
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/organizations/send-credentials`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          recipientEmail: generatedCredentials.email,
+          organizationName: generatedCredentials.organizationName,
+          userId: generatedCredentials.userId,
+          password: generatedCredentials.password
+        })
+      })
+
+      const data = (await response.json()) as { error?: { message?: string } }
+      if (!response.ok) {
+        throw new Error(data.error?.message ?? 'Unable to send credentials email')
+      }
+
+      setSendCredentialsMessage(`Credentials sent to ${generatedCredentials.email}`)
+    } catch (error) {
+      setSendCredentialsError(error instanceof Error ? error.message : 'Unable to send credentials email')
+    } finally {
+      setIsSendingCredentials(false)
+    }
+  }
+
   const closeRegisterModal = () => {
     if (isRegistering) {
       return
@@ -275,6 +332,8 @@ export default function OrganizationsClient() {
     setShowRegisterModal(false)
     setRegisterError(null)
     setGeneratedCredentials(null)
+    setSendCredentialsMessage(null)
+    setSendCredentialsError(null)
   }
 
   return (
@@ -462,6 +521,17 @@ export default function OrganizationsClient() {
                         placeholder="Example Corp Pvt Ltd"
                       />
                     </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Corporate Email</label>
+                      <input
+                        type="email"
+                        value={corporateEmail}
+                        onChange={(event) => setCorporateEmail(event.target.value)}
+                        required
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        placeholder="corp@example.com"
+                      />
+                    </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">GST</label>
@@ -515,8 +585,25 @@ export default function OrganizationsClient() {
                     {generatedCredentials && (
                       <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
                         <p className="font-semibold">Corporate login credentials generated</p>
+                        <p className="mt-1">Email: <span className="font-bold">{generatedCredentials.email}</span></p>
                         <p className="mt-1">User ID: <span className="font-bold">{generatedCredentials.userId}</span></p>
                         <p>Password: <span className="font-bold">{generatedCredentials.password}</span></p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleSendCredentials}
+                            disabled={isSendingCredentials}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
+                          >
+                            {isSendingCredentials ? 'Sending...' : 'Send Credentials by Email'}
+                          </button>
+                          {sendCredentialsMessage && (
+                            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{sendCredentialsMessage}</p>
+                          )}
+                          {sendCredentialsError && (
+                            <p className="text-xs font-medium text-rose-700 dark:text-rose-300">{sendCredentialsError}</p>
+                          )}
+                        </div>
                       </div>
                     )}
 
